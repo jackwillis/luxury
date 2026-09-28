@@ -9,3 +9,10 @@ executable luxury
     other-modules:    SExpr
     default-language: GHC2024
     build-depends:    base, haskeline
+
+executable scratch
+    main-is:          Scratch.hs
+    hs-source-dirs:   app
+    other-modules:    SExpr
+    default-language: GHC2024
+    build-depends:    base, haskeline

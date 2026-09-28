@@ -2,23 +2,11 @@ module Main where
 
 import Data.Char (isSpace)
 import Data.List (dropWhileEnd)
-import System.Console.Haskeline (InputT, getInputLine, outputStrLn, runInputT)
+import System.Console.Haskeline (InputT, defaultSettings, getInputLine, outputStrLn, runInputT)
 import Text.Printf (printf)
-import qualified SExpr
-import qualified System.Console.Haskeline as Haskeline
 
 main :: IO ()
-main = do
-  runInputT Haskeline.defaultSettings $ do
-    scratchDemo
-    loop 1
-
-scratchDemo :: InputT IO ()
-scratchDemo = do
-  let sExpr = SExpr.List [SExpr.Symbol "+", SExpr.Number 2, SExpr.Number 3]
-
-  outputStrLn $ show sExpr
-  outputStrLn $ SExpr.render sExpr
+main = runInputT defaultSettings (loop 1)
 
 loop :: Int -> InputT IO ()
 loop promptCount = do
