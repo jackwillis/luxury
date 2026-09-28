@@ -20,3 +20,11 @@ executable scratch
     hs-source-dirs:   scratch
     default-language: GHC2024
     build-depends:    base, haskeline, luxury-scheme
+
+test-suite luxury-scheme-test
+    type:             exitcode-stdio-1.0
+    main-is:          Main.hs
+    hs-source-dirs:   test
+    other-modules:    SExprSpec
+    default-language: GHC2024
+    build-depends:    base, hspec, luxury-scheme
