@@ -8,7 +8,8 @@ main = runInputT defaultSettings scratchDemo
 
 scratchDemo :: InputT IO ()
 scratchDemo = do
-  let sExpr = SExpr.List [SExpr.Symbol "+", SExpr.Number 2, SExpr.Number 3]
-
-  outputStrLn $ show sExpr
-  outputStrLn $ SExpr.render sExpr
+  outputStrLn $ SExpr.render $ SExpr.List [SExpr.Symbol "+", SExpr.Number 2, SExpr.Number 3]
+  outputStrLn $ SExpr.render $ SExpr.List [SExpr.Symbol "def", SExpr.Symbol "foo", SExpr.Number 2]
+  outputStrLn $ SExpr.render $ SExpr.List [
+    SExpr.Symbol "println",
+      SExpr.List [SExpr.Symbol "+", SExpr.Symbol "foo", SExpr.Number 3]]
