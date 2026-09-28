@@ -1,18 +1,40 @@
 module Main where
 
-import System.IO (isEOF)
+import Control.Monad (unless)
+import Data.Char (isSpace)
+import Data.List (dropWhileEnd)
+import System.IO (hFlush, isEOF, stdout)
 
 main :: IO ()
 main = do
-  putStrLn "luxury-scheme"
   loop
 
 loop :: IO ()
 loop = do
+  showPrompt
   eof <- isEOF
   if eof
-    then pure ()
+    then quit
     else do
-      line <- getLine
-      putStrLn ("you typed: " <> line)
+      userInput <- getLine
+      case toMaybeLine userInput of
+        Just line -> putStrLn line
+        Nothing   -> pure ()
       loop
+
+showPrompt :: IO ()
+showPrompt = do
+  putStr "luxury> "
+  hFlush stdout
+
+quit :: IO ()
+quit = do
+  putStrLn "\nGoodbye"
+
+toMaybeLine :: String -> Maybe String
+toMaybeLine userEntry
+  | all isSpace userEntry = Nothing
+  | otherwise             = Just (trimWhitespace userEntry)
+
+trimWhitespace :: String -> String
+trimWhitespace = dropWhileEnd isSpace . dropWhile isSpace
