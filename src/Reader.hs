@@ -1,7 +1,6 @@
 module Reader where
 
 import Data.Char (isSpace)
-import Data.List (dropWhileEnd, groupBy)
 
 data Token
   = LParen
