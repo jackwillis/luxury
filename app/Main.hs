@@ -11,7 +11,7 @@ loop :: InputT IO ()
 loop = do
   minput <- getInputLine "luxury> "
   case minput of
-    Nothing -> outputStrLn "\nGoodbye"
+    Nothing -> outputStrLn "Goodbye"
     Just userInput -> do
       case toMaybeLine userInput of
         Just line -> outputStrLn line
