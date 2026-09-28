@@ -9,6 +9,7 @@ spec = do
   tokenizeSpec
   renderReaderErrorSpec
   readSExprSpec
+  readProgramSpec
 
 tokenizeSpec :: Spec
 tokenizeSpec = describe "Reader.tokenize" $ do
@@ -124,3 +125,40 @@ readSExprSpec = describe "Reader.readSExpr" $ do
 
     it "fails on an unterminated list with contents" $
       readSExpr [LParen, Atom "a"] `shouldBe` Left UnterminatedList
+
+readProgramSpec :: Spec
+readProgramSpec = describe "Reader.readProgram" $ do
+  describe "empty input" $ do
+    it "reads an empty program as no forms" $
+      readProgram "" `shouldBe` Right []
+
+    it "reads whitespace-only input as no forms" $
+      readProgram "   " `shouldBe` Right []
+
+  describe "multiple top-level forms" $ do
+    it "reads a single atom as a one-form program" $
+      readProgram "foo" `shouldBe` Right [Symbol "foo"]
+
+    it "reads multiple top-level atoms as multiple forms, not an error" $
+      readProgram "foo bar" `shouldBe` Right [Symbol "foo", Symbol "bar"]
+
+    it "reads multiple top-level lists" $
+      readProgram "(+ 1 2) (* 3 4)"
+        `shouldBe` Right
+          [ List [Symbol "+", Number 1, Number 2]
+          , List [Symbol "*", Number 3, Number 4]
+          ]
+
+    it "reads a mix of lists and atoms" $
+      readProgram "(def foo 2) foo"
+        `shouldBe` Right
+          [ List [Symbol "def", Symbol "foo", Number 2]
+          , Symbol "foo"
+          ]
+
+  describe "errors" $ do
+    it "fails on a stray close paren after a valid form" $
+      readProgram "foo )" `shouldBe` Left UnexpectedRParen
+
+    it "fails on an unterminated list" $
+      readProgram "(foo" `shouldBe` Left UnterminatedList
