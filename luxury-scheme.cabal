@@ -6,5 +6,6 @@ build-type:         Simple
 executable luxury
     main-is:          Main.hs
     hs-source-dirs:   app
+    other-modules:    SExpr
     default-language: GHC2024
     build-depends:    base, haskeline
