@@ -1,35 +1,22 @@
 module Main where
 
-import Control.Monad (unless)
 import Data.Char (isSpace)
 import Data.List (dropWhileEnd)
-import System.IO (hFlush, isEOF, stdout)
+import System.Console.Haskeline
 
 main :: IO ()
-main = do
-  loop
+main = runInputT defaultSettings loop
 
-loop :: IO ()
+loop :: InputT IO ()
 loop = do
-  showPrompt
-  eof <- isEOF
-  if eof
-    then quit
-    else do
-      userInput <- getLine
+  minput <- getInputLine "luxury> "
+  case minput of
+    Nothing -> outputStrLn "\nGoodbye"
+    Just userInput -> do
       case toMaybeLine userInput of
-        Just line -> putStrLn line
+        Just line -> outputStrLn line
         Nothing   -> pure ()
       loop
-
-showPrompt :: IO ()
-showPrompt = do
-  putStr "luxury> "
-  hFlush stdout
-
-quit :: IO ()
-quit = do
-  putStrLn "\nGoodbye"
 
 toMaybeLine :: String -> Maybe String
 toMaybeLine userEntry
