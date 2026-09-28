@@ -1,10 +1,17 @@
 module ReaderSpec (spec) where
 
 import Reader
+import SExpr
 import Test.Hspec
 
 spec :: Spec
-spec = describe "Reader.tokenize" $ do
+spec = do
+  tokenizeSpec
+  renderReaderErrorSpec
+  readSExprSpec
+
+tokenizeSpec :: Spec
+tokenizeSpec = describe "Reader.tokenize" $ do
   describe "basics" $ do
     it "tokenizes an empty string as no tokens" $
       tokenize "" `shouldBe` []
@@ -57,3 +64,63 @@ spec = describe "Reader.tokenize" $ do
 
     it "allows a decimal point in an atom" $
       tokenize "3.14" `shouldBe` [Atom "3.14"]
+
+renderReaderErrorSpec :: Spec
+renderReaderErrorSpec = describe "Reader.renderReaderError" $ do
+  it "renders UnexpectedEOF" $
+    renderReaderError UnexpectedEOF `shouldBe` "Unexpected end of input."
+
+  it "renders UnexpectedRParen" $
+    renderReaderError UnexpectedRParen `shouldBe` "Unexpected ')'."
+
+  it "renders UnterminatedList" $
+    renderReaderError UnterminatedList `shouldBe` "Unterminated list; expected ')'."
+
+  it "renders TrailingTokens, showing the leftover tokens" $
+    renderReaderError (TrailingTokens [Atom "bar"])
+      `shouldBe` "Unexpected input after expression: bar."
+
+readSExprSpec :: Spec
+readSExprSpec = describe "Reader.readSExpr" $ do
+  describe "atoms" $ do
+    it "reads a non-numeric atom as a Symbol" $
+      readSExpr [Atom "foo"] `shouldBe` Right (Symbol "foo", [])
+
+    it "reads a numeric atom as a Number" $
+      readSExpr [Atom "42"] `shouldBe` Right (Number 42, [])
+
+    it "reads a negative numeric atom as a Number" $
+      readSExpr [Atom "-5"] `shouldBe` Right (Number (-5), [])
+
+  describe "lists" $ do
+    it "reads an empty list" $
+      readSExpr [LParen, RParen] `shouldBe` Right (List [], [])
+
+    it "reads a flat list" $
+      readSExpr [LParen, Atom "+", Atom "2", Atom "3", RParen]
+        `shouldBe` Right (List [Symbol "+", Number 2, Number 3], [])
+
+    it "reads nested lists" $
+      readSExpr [LParen, Atom "a", LParen, Atom "b", Atom "c", RParen, RParen]
+        `shouldBe` Right (List [Symbol "a", List [Symbol "b", Symbol "c"]], [])
+
+  describe "leftover tokens" $ do
+    it "returns tokens after a single atom as leftovers, not an error" $
+      readSExpr [Atom "foo", Atom "bar"] `shouldBe` Right (Symbol "foo", [Atom "bar"])
+
+    it "returns tokens after a complete list as leftovers, not an error" $
+      readSExpr [LParen, Atom "+", Atom "2", Atom "3", RParen, Atom "extra"]
+        `shouldBe` Right (List [Symbol "+", Number 2, Number 3], [Atom "extra"])
+
+  describe "errors" $ do
+    it "fails on no tokens at all" $
+      readSExpr [] `shouldBe` Left UnexpectedEOF
+
+    it "fails on a leading close paren" $
+      readSExpr [RParen] `shouldBe` Left UnexpectedRParen
+
+    it "fails on an unterminated empty list" $
+      readSExpr [LParen] `shouldBe` Left UnterminatedList
+
+    it "fails on an unterminated list with contents" $
+      readSExpr [LParen, Atom "a"] `shouldBe` Left UnterminatedList
