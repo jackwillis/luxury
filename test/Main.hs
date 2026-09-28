@@ -1,7 +1,10 @@
 module Main where
 
+import qualified ReaderSpec
 import qualified SExprSpec
 import Test.Hspec (hspec)
 
 main :: IO ()
-main = hspec SExprSpec.spec
+main = hspec $ do
+  SExprSpec.spec
+  ReaderSpec.spec
