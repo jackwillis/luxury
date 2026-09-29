@@ -127,34 +127,38 @@ spec = describe "Eval.eval" $ do
                         SExpr.List [SExpr.Symbol "-", SExpr.Number (ExactInteger 5), SExpr.Number (ExactInteger 2)]])
         `shouldBe` Right (Value.Number (ExactInteger 9))
 
-  describe "arity errors" $ do
-    it "fails on + with no arguments" $
+  describe "arity and variadic operations (R7RS)" $ do
+    it "evaluates (+ ) to 0 (identity)" $
       eval (SExpr.List [SExpr.Symbol "+"])
-        `shouldBe` Left (CannotEvaluate (SExpr.List [SExpr.Symbol "+"]))
+        `shouldBe` Right (Value.Number (ExactInteger 0))
 
-    it "fails on + with one argument" $
-      eval (SExpr.List [SExpr.Symbol "+", SExpr.Number (ExactInteger 1)])
-        `shouldBe` Left (CannotEvaluate (SExpr.List [SExpr.Symbol "+", SExpr.Number (ExactInteger 1)]))
+    it "evaluates (+ 5) to 5" $
+      eval (SExpr.List [SExpr.Symbol "+", SExpr.Number (ExactInteger 5)])
+        `shouldBe` Right (Value.Number (ExactInteger 5))
+
+    it "evaluates (* ) to 1 (identity)" $
+      eval (SExpr.List [SExpr.Symbol "*"])
+        `shouldBe` Right (Value.Number (ExactInteger 1))
+
+    it "evaluates (* 5) to 5" $
+      eval (SExpr.List [SExpr.Symbol "*", SExpr.Number (ExactInteger 5)])
+        `shouldBe` Right (Value.Number (ExactInteger 5))
+
+    it "evaluates (- 5) to -5 (unary negation)" $
+      eval (SExpr.List [SExpr.Symbol "-", SExpr.Number (ExactInteger 5)])
+        `shouldBe` Right (Value.Number (ExactInteger (-5)))
+
+    it "evaluates (/ 2) to 0.5 (reciprocal)" $
+      eval (SExpr.List [SExpr.Symbol "/", SExpr.Number (ExactInteger 2)])
+        `shouldBe` Right (Value.Number (InexactReal 0.5))
 
     it "fails on - with no arguments" $
       eval (SExpr.List [SExpr.Symbol "-"])
         `shouldBe` Left (CannotEvaluate (SExpr.List [SExpr.Symbol "-"]))
 
-    it "fails on * with no arguments" $
-      eval (SExpr.List [SExpr.Symbol "*"])
-        `shouldBe` Left (CannotEvaluate (SExpr.List [SExpr.Symbol "*"]))
-
-    it "fails on / with one argument" $
-      eval (SExpr.List [SExpr.Symbol "/", SExpr.Number (ExactInteger 6)])
-        `shouldBe` Left (CannotEvaluate (SExpr.List [SExpr.Symbol "/", SExpr.Number (ExactInteger 6)]))
-
-    it "fails on = with no arguments" $
-      eval (SExpr.List [SExpr.Symbol "="])
-        `shouldBe` Left (CannotEvaluate (SExpr.List [SExpr.Symbol "="]))
-
-    it "fails on < with one argument" $
-      eval (SExpr.List [SExpr.Symbol "<", SExpr.Number (ExactInteger 1)])
-        `shouldBe` Left (CannotEvaluate (SExpr.List [SExpr.Symbol "<", SExpr.Number (ExactInteger 1)]))
+    it "fails on / with no arguments" $
+      eval (SExpr.List [SExpr.Symbol "/"])
+        `shouldBe` Left (CannotEvaluate (SExpr.List [SExpr.Symbol "/"]))
 
   describe "type errors" $ do
     it "fails on + with string operand" $
