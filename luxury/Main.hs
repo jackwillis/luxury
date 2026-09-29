@@ -5,25 +5,31 @@ import Data.List (dropWhileEnd)
 import System.Console.Haskeline (InputT, defaultSettings, getInputLine, outputStrLn, runInputT)
 import Text.Printf (printf)
 
-import qualified Eval
+import Env (Env)
+import qualified Env (bind, initial, lookup)
+import Eval (eval, renderEvalError)
 import Reader (readProgram, renderReaderError)
-import qualified SExpr
-import qualified Value
+import SExpr (SExpr)
+import qualified Value (render)
 
 main :: IO ()
-main = runInputT defaultSettings (loop 1)
+main = do
+  let env = Env.bind "promptCount" 1 Env.initial
+  runInputT defaultSettings (loop env)
 
 loop :: Int -> InputT IO ()
-loop promptCount = do
+loop env = do
+  let promptCount = Env.lookup "promptCount" env
   let prompt = printf "luxury:%03d> " promptCount
   lineOrEof <- getInputLine prompt
   case lineOrEof of
     Nothing -> outputStrLn "Goodbye"
     Just userInput -> do
       case toMaybeLine userInput of
-        Just line -> readEvaluatePrint line
+        Just line -> readEvaluatePrint env line
         Nothing   -> pure ()
-      loop (promptCount + 1)
+      let nextEnv = Env.bind "promptCount" (promptCount + 1) env
+      loop nextEnv
 
 
 readEvaluatePrint :: String -> InputT IO ()
@@ -33,10 +39,10 @@ readEvaluatePrint line = do
     Left readerError  -> outputStrLn $ renderReaderError readerError
     Right expressions -> mapM_ evaluatePrint expressions
 
-evaluatePrint :: SExpr.SExpr -> InputT IO ()
-evaluatePrint expression =
-  case Eval.eval expression of
-    Left evalError -> outputStrLn $ show evalError
+evaluatePrint :: Env -> SExpr -> InputT IO ()
+evaluatePrint env expression =
+  case eval env expression of
+    Left evalError -> outputStrLn $ renderEvalError evalError
     Right value    -> outputStrLn $ Value.render value
 
 

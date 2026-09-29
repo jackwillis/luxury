@@ -5,9 +5,9 @@ build-type:         Simple
 
 library
     hs-source-dirs:   src
-    exposed-modules:  Number, SExpr, Value, Reader, Eval
+    exposed-modules:  Env, Eval, Number, Reader, SExpr, Value
     default-language: GHC2024
-    build-depends:    base
+    build-depends:    base, containers
 
 executable luxury
     main-is:          Main.hs

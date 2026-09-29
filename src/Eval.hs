@@ -2,30 +2,51 @@
 module Eval
   ( EvalError(..)
   , eval
+  , renderEvalError
   ) where
 
+import Env (Env, lookup)
 import Number (Number(..))
-import SExpr (SExpr(..))
-import qualified Value
+import SExpr (SExpr(..), render)
+import Value (Value(..))
+
 
 data EvalError
-  = CannotEvaluate SExpr
+  = UnboundVariable String
+  | CannotEvaluate SExpr
   deriving (Eq, Show)
 
-eval :: SExpr -> Either EvalError Value.Value
-eval (SExpr.Number number) =
+renderEvalError :: EvalError -> String
+renderEvalError (UnboundVariable name) =
+  "Unbound variable: " <> name
+
+renderEvalError (CannotEvaluate expression) =
+  "Cannot evaluate: " <> SExpr.render expression
+
+
+eval :: Env -> SExpr -> Either EvalError Value
+eval env (SExpr.Symbol name) =
+  case Env.lookup name env of
+    Just value ->
+      Right value
+
+    Nothing ->
+      Left (UnboundVariable name)
+
+eval _env (SExpr.Number number) =
   Right (Value.Number number)
 
-eval (SExpr.Boolean boolean) =
+eval _env (SExpr.Boolean boolean) =
   Right (Value.Boolean boolean)
 
-eval (SExpr.List [SExpr.Symbol "quote", expression]) =
+eval _env (SExpr.List [SExpr.Symbol "quote", expression]) =
   Right (quoteDatum expression)
 
-eval expression =
+eval _env expression =
   Left (CannotEvaluate expression)
 
-quoteDatum :: SExpr -> Value.Value
+
+quoteDatum :: SExpr -> Value
 quoteDatum (SExpr.Number number) =
   Value.Number number
 
