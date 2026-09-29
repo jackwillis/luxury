@@ -15,9 +15,9 @@ executable luxury
     default-language: GHC2024
     build-depends:    base, haskeline, luxury-scheme
 
-executable scratch
+executable ilux
     main-is:          Main.hs
-    hs-source-dirs:   scratch
+    hs-source-dirs:   ilux
     default-language: GHC2024
     build-depends:    base, haskeline, luxury-scheme
 

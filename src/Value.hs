@@ -7,6 +7,7 @@ module Value
 import Number (Number)
 import qualified Number
 
+
 data Value
   = Number Number
   | Boolean Bool

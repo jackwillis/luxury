@@ -4,6 +4,7 @@ module Number
   , render
   ) where
 
+
 data Number
   = ExactInteger Integer
   | InexactReal Double

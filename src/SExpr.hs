@@ -4,8 +4,9 @@ module SExpr
   , render
   ) where
 
-import Number (Number(..))
+import Number (Number)
 import qualified Number
+
 
 data SExpr
   = Symbol String
@@ -15,7 +16,6 @@ data SExpr
   deriving (Eq, Show)
 
 render :: SExpr -> String
-
 render (Symbol name) =
   name
 

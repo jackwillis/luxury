@@ -16,6 +16,7 @@ import Text.Read (readMaybe)
 import Number (Number(..))
 import SExpr (SExpr(..))
 
+
 data Token
   = LParen
   | RParen
@@ -27,7 +28,6 @@ data ReaderError
   | UnexpectedRParen
   | UnterminatedList
   deriving (Eq, Show)
-
 
 renderToken :: Token -> String
 renderToken LParen      = "("
