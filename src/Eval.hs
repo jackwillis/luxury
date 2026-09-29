@@ -19,5 +19,8 @@ eval (SExpr.Number number) =
 eval (SExpr.Boolean boolean) =
   Right (Value.Boolean boolean)
 
+eval (SExpr.Symbol _) =
+  Right (Value.Number (ExactInteger 0))
+
 eval expression =
   Left (CannotEvaluate expression)
