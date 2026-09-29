@@ -23,6 +23,7 @@ main :: IO ()
 main =
   runInputT defaultSettings (loop Env.initial 1)
 
+
 loop :: Env -> Int -> InputT IO ()
 loop env promptCount = do
   let prompt = printf "ilux:%03d> " promptCount
@@ -30,7 +31,7 @@ loop env promptCount = do
 
   case lineOrEof of
     Nothing ->
-      outputStrLn "~Goodbye"
+      outputStrLn "Goodbye"
 
     Just userInput -> do
       case toMaybeLine userInput of

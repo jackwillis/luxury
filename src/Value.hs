@@ -12,7 +12,8 @@ data Value
   = Number Number
   | Boolean Bool
   | Symbol String
-  | List [Value]
+  | Pair Value Value
+  | EmptyList
   deriving (Eq, Show)
 
 render :: Value -> String
@@ -27,5 +28,21 @@ render (Boolean valence) =
 render (Symbol name) =
   name
 
-render (List elements) =
-  "(" <> unwords (map render elements) <> ")"
+render EmptyList =
+  "()"
+
+render pair@(Pair _ _) =
+  "(" <> renderPair pair <> ")"
+
+renderPair :: Value -> String
+renderPair (Pair first EmptyList) =
+  render first
+
+renderPair (Pair first rest@(Pair _ _)) =
+  render first <> " " <> renderPair rest
+
+renderPair (Pair first rest) =
+  render first <> " . " <> render rest
+
+renderPair value =
+  render value

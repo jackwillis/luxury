@@ -13,7 +13,7 @@ executable luxury
     main-is:          Main.hs
     hs-source-dirs:   luxury
     default-language: GHC2024
-    build-depends:    base, haskeline, luxury-scheme
+    build-depends:    base, luxury-scheme
 
 executable ilux
     main-is:          Main.hs

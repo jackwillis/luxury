@@ -59,4 +59,9 @@ quoteDatum (SExpr.Symbol name) =
   Value.Symbol name
 
 quoteDatum (SExpr.List elements) =
-  Value.List (map quoteDatum elements)
+  listToPairs (map quoteDatum elements)
+
+
+listToPairs :: [Value] -> Value
+listToPairs =
+  foldr Value.Pair Value.EmptyList
