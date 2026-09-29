@@ -29,6 +29,20 @@ data ReaderError
   deriving (Eq, Show)
 
 
+renderToken :: Token -> String
+renderToken LParen      = "("
+renderToken RParen      = ")"
+renderToken (Atom text) = text
+
+renderTokens :: [Token] -> String
+renderTokens = unwords . map renderToken
+
+renderReaderError :: ReaderError -> String
+renderReaderError UnexpectedEOF     = "Unexpected end of input."
+renderReaderError UnexpectedRParen  = "Unexpected ')'."
+renderReaderError UnterminatedList  = "Unterminated list; expected ')'."
+
+
 tokenize :: String -> [Token]
 tokenize "" = []
 tokenize programText@(first:rest)
@@ -134,16 +148,3 @@ readProgram program =
       (expression, remainingTokens) <- readSExpr tokens
       remainingExpressions <- readExpressions remainingTokens
       pure (expression : remainingExpressions)
-
-
-renderTokens :: [Token] -> String
-renderTokens = unwords . map renderToken
-  where
-    renderToken LParen      = "("
-    renderToken RParen      = ")"
-    renderToken (Atom text) = text
-
-renderReaderError :: ReaderError -> String
-renderReaderError UnexpectedEOF     = "Unexpected end of input."
-renderReaderError UnexpectedRParen  = "Unexpected ')'."
-renderReaderError UnterminatedList  = "Unterminated list; expected ')'."
