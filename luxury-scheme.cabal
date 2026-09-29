@@ -5,7 +5,7 @@ build-type:         Simple
 
 library
     hs-source-dirs:   src
-    exposed-modules:  SExpr, Reader
+    exposed-modules:  Number, SExpr, Value, Reader, Eval
     default-language: GHC2024
     build-depends:    base
 

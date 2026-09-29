@@ -5,8 +5,10 @@ import Data.List (dropWhileEnd)
 import System.Console.Haskeline (InputT, defaultSettings, getInputLine, outputStrLn, runInputT)
 import Text.Printf (printf)
 
+import qualified Eval
 import Reader (readProgram, renderReaderError)
-import SExpr
+import qualified SExpr
+import qualified Value
 
 main :: IO ()
 main = runInputT defaultSettings (loop 1)
@@ -23,12 +25,20 @@ loop promptCount = do
         Nothing   -> pure ()
       loop (promptCount + 1)
 
+
 readEvaluatePrint :: String -> InputT IO ()
 readEvaluatePrint line = do
-  let readResult = readProgram line
-  case readResult of
-    Left error        -> outputStrLn $ renderReaderError error 
-    Right expressions -> mapM_ (outputStrLn . SExpr.render) expressions
+  let readerResult = readProgram line
+  case readerResult of
+    Left readerError  -> outputStrLn $ renderReaderError readerError
+    Right expressions -> mapM_ evaluatePrint expressions
+
+evaluatePrint :: SExpr.SExpr -> InputT IO ()
+evaluatePrint expression =
+  case Eval.eval expression of
+    Left evalError -> outputStrLn $ show evalError
+    Right value    -> outputStrLn $ Value.render value
+
 
 toMaybeLine :: String -> Maybe String
 toMaybeLine userEntry

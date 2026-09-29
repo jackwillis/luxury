@@ -1,13 +1,12 @@
+-- reader-level representation
 module SExpr
   ( SExpr(..)
   , Number(..)
   , render
   ) where
 
-data Number
-  = ExactInteger Integer
-  | InexactReal Double
-  deriving (Eq, Show)
+import Number (Number(..))
+import qualified Number
 
 data SExpr
   = Symbol String
@@ -21,11 +20,8 @@ render :: SExpr -> String
 render (Symbol name) =
   name
 
-render (Number (ExactInteger quantity)) =
-  show quantity
-
-render (Number (InexactReal quantity)) =
-  show quantity
+render (Number number) =
+  Number.render number
 
 render (Boolean valence) =
   case valence of
