@@ -275,6 +275,40 @@ spec = describe "Eval.eval" $ do
       eval (SExpr.List [SExpr.Symbol "-", SExpr.Number (ExactInteger 10), SExpr.Number (ExactInteger 3)])
         `shouldBe` Right (Value.Number (ExactInteger 7))
 
+  describe "large numbers (R7RS arbitrary precision)" $ do
+    it "evaluates very large exact integer" $
+      eval (SExpr.Number (ExactInteger 999999999999999999999))
+        `shouldBe` Right (Value.Number (ExactInteger 999999999999999999999))
+
+    it "adds large integers without overflow" $
+      eval (SExpr.List [SExpr.Symbol "+", SExpr.Number (ExactInteger 999999999999999999), SExpr.Number (ExactInteger 1)])
+        `shouldBe` Right (Value.Number (ExactInteger 1000000000000000000))
+
+    it "multiplies large integers" $
+      eval (SExpr.List [SExpr.Symbol "*", SExpr.Number (ExactInteger 1000000000), SExpr.Number (ExactInteger 1000000000)])
+        `shouldBe` Right (Value.Number (ExactInteger 1000000000000000000))
+
+    it "negates large integer" $
+      eval (SExpr.List [SExpr.Symbol "-", SExpr.Number (ExactInteger 999999999999999999)])
+        `shouldBe` Right (Value.Number (ExactInteger (-999999999999999999)))
+
+  describe "subnormal and boundary floats" $ do
+    it "evaluates very small positive float" $
+      eval (SExpr.Number (InexactReal 1e-100))
+        `shouldBe` Right (Value.Number (InexactReal 1e-100))
+
+    it "evaluates very small negative float" $
+      eval (SExpr.Number (InexactReal (-1e-100)))
+        `shouldBe` Right (Value.Number (InexactReal (-1e-100)))
+
+    it "adds very small floats" $
+      eval (SExpr.List [SExpr.Symbol "+", SExpr.Number (InexactReal 1e-100), SExpr.Number (InexactReal 1e-100)])
+        `shouldBe` Right (Value.Number (InexactReal 2e-100))
+
+    it "compares very small floats: (< 1e-100 2e-100)" $
+      eval (SExpr.List [SExpr.Symbol "<", SExpr.Number (InexactReal 1e-100), SExpr.Number (InexactReal 2e-100)])
+        `shouldBe` Right (Value.Boolean True)
+
   describe "quote edge cases" $ do
     it "evaluates (quote (quote x)) to quoted symbol" $
       eval (SExpr.List [SExpr.Symbol "quote", SExpr.List [SExpr.Symbol "quote", SExpr.Symbol "x"]])
