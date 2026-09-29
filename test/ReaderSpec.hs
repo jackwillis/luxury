@@ -77,21 +77,45 @@ renderReaderErrorSpec = describe "Reader.renderReaderError" $ do
   it "renders UnterminatedList" $
     renderReaderError UnterminatedList `shouldBe` "Unterminated list; expected ')'."
 
-  it "renders TrailingTokens, showing the leftover tokens" $
-    renderReaderError (TrailingTokens [Atom "bar"])
-      `shouldBe` "Unexpected input after expression: bar."
-
 readSExprSpec :: Spec
 readSExprSpec = describe "Reader.readSExpr" $ do
   describe "atoms" $ do
     it "reads a non-numeric atom as a Symbol" $
       readSExpr [Atom "foo"] `shouldBe` Right (Symbol "foo", [])
 
-    it "reads a numeric atom as a Number" $
-      readSExpr [Atom "42"] `shouldBe` Right (Number 42, [])
+    it "reads a integer atom as a Number" $
+      readSExpr [Atom "42"] `shouldBe` Right (Number (ExactInteger 42), [])
 
-    it "reads a negative numeric atom as a Number" $
-      readSExpr [Atom "-5"] `shouldBe` Right (Number (-5), [])
+    it "reads a negative integer atom as a Number" $
+      readSExpr [Atom "-5"] `shouldBe` Right (Number (ExactInteger (-5)), [])
+
+    it "reads a floating atom as a Number" $
+      readSExpr [Atom "4.2"] `shouldBe` Right (Number (InexactReal 4.2), [])
+
+    it "reads a negative floating atom as a Number" $
+      readSExpr [Atom "-3.3"] `shouldBe` Right (Number (InexactReal (-3.3)), [])
+
+    it "falls back to Symbol for a malformed number (bare minus sign)" $
+      readSExpr [Atom "-"] `shouldBe` Right (Symbol "-", [])
+
+    it "falls back to Symbol for a malformed number (multiple decimal points)" $
+      readSExpr [Atom "4.2.3"] `shouldBe` Right (Symbol "4.2.3", [])
+
+  describe "booleans" $ do
+    it "reads #t as True" $
+      readSExpr [Atom "#t"] `shouldBe` Right (Boolean True, [])
+
+    it "reads #T as True" $
+      readSExpr [Atom "#T"] `shouldBe` Right (Boolean True, [])
+
+    it "reads #f as False" $
+      readSExpr [Atom "#f"] `shouldBe` Right (Boolean False, [])
+
+    it "reads #F as False" $
+      readSExpr [Atom "#F"] `shouldBe` Right (Boolean False, [])
+
+    it "falls back to Symbol for a non-boolean # atom" $
+      readSExpr [Atom "#nope"] `shouldBe` Right (Symbol "#nope", [])
 
   describe "lists" $ do
     it "reads an empty list" $
@@ -99,11 +123,15 @@ readSExprSpec = describe "Reader.readSExpr" $ do
 
     it "reads a flat list" $
       readSExpr [LParen, Atom "+", Atom "2", Atom "3", RParen]
-        `shouldBe` Right (List [Symbol "+", Number 2, Number 3], [])
+        `shouldBe` Right (List [Symbol "+", Number (ExactInteger 2), Number (ExactInteger 3)], [])
 
     it "reads nested lists" $
       readSExpr [LParen, Atom "a", LParen, Atom "b", Atom "c", RParen, RParen]
         `shouldBe` Right (List [Symbol "a", List [Symbol "b", Symbol "c"]], [])
+
+    it "reads a list containing a boolean" $
+      readSExpr [LParen, Atom "not", Atom "#f", RParen]
+        `shouldBe` Right (List [Symbol "not", Boolean False], [])
 
   describe "leftover tokens" $ do
     it "returns tokens after a single atom as leftovers, not an error" $
@@ -111,7 +139,7 @@ readSExprSpec = describe "Reader.readSExpr" $ do
 
     it "returns tokens after a complete list as leftovers, not an error" $
       readSExpr [LParen, Atom "+", Atom "2", Atom "3", RParen, Atom "extra"]
-        `shouldBe` Right (List [Symbol "+", Number 2, Number 3], [Atom "extra"])
+        `shouldBe` Right (List [Symbol "+", Number (ExactInteger 2), Number (ExactInteger 3)], [Atom "extra"])
 
   describe "errors" $ do
     it "fails on no tokens at all" $
@@ -125,6 +153,9 @@ readSExprSpec = describe "Reader.readSExpr" $ do
 
     it "fails on an unterminated list with contents" $
       readSExpr [LParen, Atom "a"] `shouldBe` Left UnterminatedList
+
+    it "fails on an unterminated list nested inside a terminated one" $
+      readSExpr [LParen, Atom "a", LParen, Atom "b"] `shouldBe` Left UnterminatedList
 
 readProgramSpec :: Spec
 readProgramSpec = describe "Reader.readProgram" $ do
@@ -145,15 +176,23 @@ readProgramSpec = describe "Reader.readProgram" $ do
     it "reads multiple top-level lists" $
       readProgram "(+ 1 2) (* 3 4)"
         `shouldBe` Right
-          [ List [Symbol "+", Number 1, Number 2]
-          , List [Symbol "*", Number 3, Number 4]
+          [ List [Symbol "+", Number (ExactInteger 1), Number (ExactInteger 2)]
+          , List [Symbol "*", Number (ExactInteger 3), Number (ExactInteger 4)]
           ]
 
     it "reads a mix of lists and atoms" $
       readProgram "(def foo 2) foo"
         `shouldBe` Right
-          [ List [Symbol "def", Symbol "foo", Number 2]
+          [ List [Symbol "def", Symbol "foo", Number (ExactInteger 2)]
           , Symbol "foo"
+          ]
+
+    it "reads a mix of floats and booleans across forms" $
+      readProgram "1.5 #t (not #f)"
+        `shouldBe` Right
+          [ Number (InexactReal 1.5)
+          , Boolean True
+          , List [Symbol "not", Boolean False]
           ]
 
   describe "errors" $ do

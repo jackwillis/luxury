@@ -13,7 +13,7 @@ main = runInputT defaultSettings (loop 1)
 
 loop :: Int -> InputT IO ()
 loop promptCount = do
-  let prompt = printf "luxury(%03d)> " promptCount
+  let prompt = printf "luxury:%03d> " promptCount
   lineOrEof <- getInputLine prompt
   case lineOrEof of
     Nothing -> outputStrLn "Goodbye"
@@ -25,10 +25,10 @@ loop promptCount = do
 
 readEvaluatePrint :: String -> InputT IO ()
 readEvaluatePrint line = do
-  let sExprResult = readProgram line
-  case sExprResult of
-    Left error    -> outputStrLn $ renderReaderError error 
-    Right sExprs  -> mapM_ (outputStrLn . SExpr.render) sExprs
+  let readResult = readProgram line
+  case readResult of
+    Left error        -> outputStrLn $ renderReaderError error 
+    Right expressions -> mapM_ (outputStrLn . SExpr.render) expressions
 
 toMaybeLine :: String -> Maybe String
 toMaybeLine userEntry

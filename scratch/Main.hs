@@ -1,7 +1,7 @@
 module Main where
 
 import System.Console.Haskeline (InputT, defaultSettings, outputStrLn, runInputT)
-import SExpr (SExpr(..), render)
+import SExpr (Number(..), SExpr(..), render)
 import qualified Reader
 
 main :: IO ()
@@ -10,11 +10,12 @@ main = runInputT defaultSettings scratchDemo
 scratchDemo :: InputT IO ()
 scratchDemo = do
   banner "S-expressions"
-  outputStrLn $ render $ List [Symbol "+", Number 2, Number 3]
-  outputStrLn $ render $ List [Symbol "def", Symbol "foo", Number 2]
+  outputStrLn $ render $ List [Symbol "+", Number (ExactInteger 2), Number (ExactInteger 3)]
+  outputStrLn $ render $ List [Symbol "def", Symbol "foo", Number (ExactInteger 2)]
   outputStrLn $ render $ List [
     Symbol "println",
-      List [Symbol "+", Symbol "foo", Number 3]]
+      List [Symbol "+", Symbol "foo", Number (ExactInteger 3)]]
+  outputStrLn $ render $ List [Symbol "+", Number (InexactReal 1.5), Boolean True]
 
   banner "tokens"
   showTokens "(+ 2 3)"
