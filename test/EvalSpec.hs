@@ -67,21 +67,47 @@ spec = describe "Eval.eval" $ do
         `shouldBe` Right (Value.Boolean True)
 
   describe "special forms" $ do
-    it "evaluates (quote x) to the symbol x" $
-      eval (SExpr.List [SExpr.Symbol "quote", SExpr.Symbol "x"])
-        `shouldBe` Right (Value.Symbol "x")
+    describe "quote" $ do
+      it "evaluates (quote x) to the symbol x" $
+        eval (SExpr.List [SExpr.Symbol "quote", SExpr.Symbol "x"])
+          `shouldBe` Right (Value.Symbol "x")
 
-    it "evaluates (quote 42) to 42" $
-      eval (SExpr.List [SExpr.Symbol "quote", SExpr.Number (ExactInteger 42)])
-        `shouldBe` Right (Value.Number (ExactInteger 42))
+      it "evaluates (quote 42) to 42" $
+        eval (SExpr.List [SExpr.Symbol "quote", SExpr.Number (ExactInteger 42)])
+          `shouldBe` Right (Value.Number (ExactInteger 42))
 
-    it "evaluates (if #t 1 2) to 1" $
-      eval (SExpr.List [SExpr.Symbol "if", SExpr.Boolean True, SExpr.Number (ExactInteger 1), SExpr.Number (ExactInteger 2)])
-        `shouldBe` Right (Value.Number (ExactInteger 1))
+      it "evaluates (quote #t) to #t" $
+        eval (SExpr.List [SExpr.Symbol "quote", SExpr.Boolean True])
+          `shouldBe` Right (Value.Boolean True)
 
-    it "evaluates (if #f 1 2) to 2" $
-      eval (SExpr.List [SExpr.Symbol "if", SExpr.Boolean False, SExpr.Number (ExactInteger 1), SExpr.Number (ExactInteger 2)])
-        `shouldBe` Right (Value.Number (ExactInteger 2))
+      it "evaluates (quote ()) to empty list" $
+        eval (SExpr.List [SExpr.Symbol "quote", SExpr.List []])
+          `shouldBe` Right (Value.List [])
+
+      it "evaluates (quote (a b c)) to list of symbols" $
+        eval (SExpr.List [SExpr.Symbol "quote", SExpr.List [SExpr.Symbol "a", SExpr.Symbol "b", SExpr.Symbol "c"]])
+          `shouldBe` Right (Value.List [Value.Symbol "a", Value.Symbol "b", Value.Symbol "c"])
+
+      it "evaluates (quote (1 2 3)) to list of numbers" $
+        eval (SExpr.List [SExpr.Symbol "quote", SExpr.List [SExpr.Number (ExactInteger 1), SExpr.Number (ExactInteger 2), SExpr.Number (ExactInteger 3)]])
+          `shouldBe` Right (Value.List [Value.Number (ExactInteger 1), Value.Number (ExactInteger 2), Value.Number (ExactInteger 3)])
+
+      it "evaluates (quote (a (b c) d)) to nested list structure" $
+        eval (SExpr.List [SExpr.Symbol "quote", SExpr.List [SExpr.Symbol "a", SExpr.List [SExpr.Symbol "b", SExpr.Symbol "c"], SExpr.Symbol "d"]])
+          `shouldBe` Right (Value.List [Value.Symbol "a", Value.List [Value.Symbol "b", Value.Symbol "c"], Value.Symbol "d"])
+
+      it "evaluates (quote (+ 1 2)) to unevaluated form" $
+        eval (SExpr.List [SExpr.Symbol "quote", SExpr.List [SExpr.Symbol "+", SExpr.Number (ExactInteger 1), SExpr.Number (ExactInteger 2)]])
+          `shouldBe` Right (Value.List [Value.Symbol "+", Value.Number (ExactInteger 1), Value.Number (ExactInteger 2)])
+
+    describe "if" $ do
+      it "evaluates (if #t 1 2) to 1" $
+        eval (SExpr.List [SExpr.Symbol "if", SExpr.Boolean True, SExpr.Number (ExactInteger 1), SExpr.Number (ExactInteger 2)])
+          `shouldBe` Right (Value.Number (ExactInteger 1))
+
+      it "evaluates (if #f 1 2) to 2" $
+        eval (SExpr.List [SExpr.Symbol "if", SExpr.Boolean False, SExpr.Number (ExactInteger 1), SExpr.Number (ExactInteger 2)])
+          `shouldBe` Right (Value.Number (ExactInteger 2))
 
   describe "nested evaluation" $ do
     it "evaluates nested arithmetic: (+ 1 (+ 2 3))" $
