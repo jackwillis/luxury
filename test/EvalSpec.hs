@@ -11,6 +11,11 @@ evalEmpty :: SExpr.SExpr -> Either EvalError Value.Value
 evalEmpty =
   eval Env.empty
 
+-- Helper to convert list to Scheme pair structure
+list :: [Value.Value] -> Value.Value
+list [] = Value.EmptyList
+list (x:xs) = Value.Pair x (list xs)
+
 spec :: Spec
 spec = describe "Eval.eval" $ do
   describe "literals" $ do
@@ -209,7 +214,7 @@ spec = describe "Eval.eval" $ do
             [ SExpr.Symbol "quote"
             , SExpr.List []
             ])
-          `shouldBe` Right (Value.List [])
+          `shouldBe` Right (Value.EmptyList)
 
       it "evaluates (quote (a b c)) to list of symbols" $
         evalEmpty
@@ -223,7 +228,7 @@ spec = describe "Eval.eval" $ do
             ])
           `shouldBe`
             Right
-              (Value.List
+              (list
                 [ Value.Symbol "a"
                 , Value.Symbol "b"
                 , Value.Symbol "c"
@@ -241,7 +246,7 @@ spec = describe "Eval.eval" $ do
             ])
           `shouldBe`
             Right
-              (Value.List
+              (list
                 [ Value.Number (ExactInteger 1)
                 , Value.Number (ExactInteger 2)
                 , Value.Number (ExactInteger 3)
@@ -262,9 +267,9 @@ spec = describe "Eval.eval" $ do
             ])
           `shouldBe`
             Right
-              (Value.List
+              (list
                 [ Value.Symbol "a"
-                , Value.List
+                , list
                     [ Value.Symbol "b"
                     , Value.Symbol "c"
                     ]
@@ -283,7 +288,7 @@ spec = describe "Eval.eval" $ do
             ])
           `shouldBe`
             Right
-              (Value.List
+              (list
                 [ Value.Symbol "+"
                 , Value.Number (ExactInteger 1)
                 , Value.Number (ExactInteger 2)
@@ -707,7 +712,7 @@ spec = describe "Eval.eval" $ do
           ])
         `shouldBe`
           Right
-            (Value.List
+            (list
               [ Value.Symbol "quote"
               , Value.Symbol "x"
               ])
@@ -726,8 +731,8 @@ spec = describe "Eval.eval" $ do
           ])
         `shouldBe`
           Right
-            (Value.List
-              [ Value.List
+            (list
+              [ list
                   [ Value.Symbol "+"
                   , Value.Number (ExactInteger 1)
                   , Value.Number (ExactInteger 2)
