@@ -41,3 +41,28 @@ spec = describe "Env" $ do
               ]
       in Env.lookup "y" environment
            `shouldBe` Nothing
+
+  describe "initial" $ do
+    it "contains cons primitive" $
+      Env.lookup "cons" Env.initial
+        `shouldBe` Just (Value.PrimitiveProcedure Value.Cons)
+
+    it "contains car primitive" $
+      Env.lookup "car" Env.initial
+        `shouldBe` Just (Value.PrimitiveProcedure Value.Car)
+
+    it "contains cdr primitive" $
+      Env.lookup "cdr" Env.initial
+        `shouldBe` Just (Value.PrimitiveProcedure Value.Cdr)
+
+    it "contains pair? primitive" $
+      Env.lookup "pair?" Env.initial
+        `shouldBe` Just (Value.PrimitiveProcedure Value.PairP)
+
+    it "contains null? primitive" $
+      Env.lookup "null?" Env.initial
+        `shouldBe` Just (Value.PrimitiveProcedure Value.NullP)
+
+    it "does not contain unbound names" $
+      Env.lookup "undefined" Env.initial
+        `shouldBe` Nothing

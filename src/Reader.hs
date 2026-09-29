@@ -47,17 +47,23 @@ tokenize :: String -> [Token]
 tokenize "" = []
 tokenize programText@(first:rest)
   | isSpace first = tokenize rest
+  | first == ';'  = tokenize (dropRestOfCurrentLine rest)
   | first == '('  = LParen : tokenize rest
   | first == ')'  = RParen : tokenize rest
   | otherwise     =
     let (atomText, remainingProgramText) = break isTokenDelimiter programText
     in Atom atomText : tokenize remainingProgramText
   where
-    nonSpaceDelimiters :: [Char]
-    nonSpaceDelimiters = "()"
+    dropRestOfCurrentLine :: String -> String
+    dropRestOfCurrentLine =
+      dropWhile (/= '\n')
 
     isTokenDelimiter :: Char -> Bool
-    isTokenDelimiter char = char `elem` nonSpaceDelimiters || isSpace char
+    isTokenDelimiter char =
+      char `elem` nonSpaceDelimiters || isSpace char
+
+    nonSpaceDelimiters :: [Char]
+    nonSpaceDelimiters = "();"
 
 
 -- reads one complete expression from the front of the tokens, returning

@@ -14,6 +14,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 
 import Value (Value)
+import qualified Value
 
 
 newtype Env = Env (Map String Value)
@@ -25,7 +26,13 @@ empty =
 
 initial :: Env
 initial =
-  empty
+  fromList
+    [ ("cons",  Value.PrimitiveProcedure Value.Cons)
+    , ("car",   Value.PrimitiveProcedure Value.Car)
+    , ("cdr",   Value.PrimitiveProcedure Value.Cdr)
+    , ("pair?", Value.PrimitiveProcedure Value.PairP)
+    , ("null?", Value.PrimitiveProcedure Value.NullP)
+    ]
 
 fromList :: [(String, Value)] -> Env
 fromList bindings =

@@ -67,6 +67,29 @@ tokenizeSpec = describe "Reader.tokenize" $ do
     it "allows a decimal point in an atom" $
       tokenize "3.14" `shouldBe` [Atom "3.14"]
 
+  describe "comments" $ do
+    it "ignores a comment-only line" $
+      tokenize "; hello" `shouldBe` []
+
+    it "ignores a double-semicolon comment" $
+      tokenize ";; hello" `shouldBe` []
+
+    it "ignores a comment after an expression" $
+      tokenize "foo ; hello"
+        `shouldBe` [Atom "foo"]
+
+    it "allows comments without whitespace before them" $
+      tokenize "foo; hello"
+        `shouldBe` [Atom "foo"]
+
+    it "continues tokenizing after the newline" $
+      tokenize "foo ; comment\nbar"
+        `shouldBe` [Atom "foo", Atom "bar"]
+
+    it "ignores comments inside a list" $
+      tokenize "(a ; comment\n b)"
+        `shouldBe` [LParen, Atom "a", Atom "b", RParen]
+
 renderReaderErrorSpec :: Spec
 renderReaderErrorSpec = describe "Reader.renderReaderError" $ do
   it "renders UnexpectedEOF" $
@@ -241,6 +264,16 @@ readProgramSpec = describe "Reader.readProgram" $ do
           , Boolean True
           , List [Symbol "not", Boolean False]
           ]
+
+  describe "comments" $ do
+    it "ignores comments between forms" $
+      readProgram
+        "foo\n;; => foo\nbar\n;; => bar"
+        `shouldBe`
+          Right
+            [ Symbol "foo"
+            , Symbol "bar"
+            ]
 
   describe "errors" $ do
     it "fails on a stray close paren after a valid form" $
