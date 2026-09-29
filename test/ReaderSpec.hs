@@ -118,6 +118,52 @@ readSExprSpec = describe "Reader.readSExpr" $ do
     it "falls back to Symbol for a non-boolean # atom" $
       readSExpr [Atom "#nope"] `shouldBe` Right (Symbol "#nope", [])
 
+  describe "number edge cases (R7RS subset)" $ do
+    it "reads zero" $
+      readSExpr [Atom "0"] `shouldBe` Right (Number (ExactInteger 0), [])
+
+    it "reads zero as float" $
+      readSExpr [Atom "0.0"] `shouldBe` Right (Number (InexactReal 0.0), [])
+
+    it "reads large positive integer" $
+      readSExpr [Atom "999999999999"] `shouldBe` Right (Number (ExactInteger 999999999999), [])
+
+    it "reads large negative integer" $
+      readSExpr [Atom "-999999999999"] `shouldBe` Right (Number (ExactInteger (-999999999999)), [])
+
+    it "reads very small positive float" $
+      readSExpr [Atom "0.0001"] `shouldBe` Right (Number (InexactReal 0.0001), [])
+
+    it "reads very small negative float" $
+      readSExpr [Atom "-0.0001"] `shouldBe` Right (Number (InexactReal (-0.0001)), [])
+
+    it "reads float without leading digit" $
+      readSExpr [Atom ".5"] `shouldBe` Right (Symbol ".5", [])
+
+    it "reads float with trailing decimal as symbol" $
+      readSExpr [Atom "3."] `shouldBe` Right (Symbol "3.", [])
+
+    it "reads leading zero integer" $
+      readSExpr [Atom "007"] `shouldBe` Right (Number (ExactInteger 7), [])
+
+    it "reads leading zeros for float" $
+      readSExpr [Atom "00.5"] `shouldBe` Right (Number (InexactReal 0.5), [])
+
+    it "reads negative zero" $
+      readSExpr [Atom "-0"] `shouldBe` Right (Number (ExactInteger 0), [])
+
+    it "reads plus sign as symbol (not implemented)" $
+      readSExpr [Atom "+"] `shouldBe` Right (Symbol "+", [])
+
+    it "reads plus prefix number as symbol (not standard R7RS parsing)" $
+      readSExpr [Atom "+5"] `shouldBe` Right (Symbol "+5", [])
+
+    it "reads double negative as symbol" $
+      readSExpr [Atom "--5"] `shouldBe` Right (Symbol "--5", [])
+
+    it "reads number with spaces as multiple tokens" $
+      tokenize "1 2 3" `shouldBe` [Atom "1", Atom "2", Atom "3"]
+
   describe "lists" $ do
     it "reads an empty list" $
       readSExpr [LParen, RParen] `shouldBe` Right (List [], [])
