@@ -90,6 +90,22 @@ tokenizeSpec = describe "Reader.tokenize" $ do
       tokenize "(a ; comment\n b)"
         `shouldBe` [LParen, Atom "a", Atom "b", RParen]
 
+  describe "quote shorthand" $ do
+    it "tokenizes 'foo as quote and atom" $
+      tokenize "'foo" `shouldBe` [Quote, Atom "foo"]
+
+    it "tokenizes '(a b) as quote and list" $
+      tokenize "'(a b)" `shouldBe` [Quote, LParen, Atom "a", Atom "b", RParen]
+
+    it "treats quote as a delimiter in foo'bar" $
+      tokenize "foo'bar" `shouldBe` [Atom "foo", Quote, Atom "bar"]
+
+    it "tokenizes nested quotes ''foo" $
+      tokenize "''foo" `shouldBe` [Quote, Quote, Atom "foo"]
+
+    it "tokenizes multiple quoted forms" $
+      tokenize "'a 'b" `shouldBe` [Quote, Atom "a", Quote, Atom "b"]
+
 renderReaderErrorSpec :: Spec
 renderReaderErrorSpec = describe "Reader.renderReaderError" $ do
   it "renders UnexpectedEOF" $
@@ -203,6 +219,27 @@ readSExprSpec = describe "Reader.readSExpr" $ do
       readSExpr [LParen, Atom "not", Atom "#f", RParen]
         `shouldBe` Right (List [Symbol "not", Boolean False], [])
 
+  describe "quote shorthand" $ do
+    it "reads [Quote, Atom \"foo\"] as (quote foo)" $
+      readSExpr [Quote, Atom "foo"]
+        `shouldBe` Right (List [Symbol "quote", Symbol "foo"], [])
+
+    it "reads [Quote, LParen, ...] as (quote (...))" $
+      readSExpr [Quote, LParen, Atom "a", Atom "b", RParen]
+        `shouldBe` Right (List [Symbol "quote", List [Symbol "a", Symbol "b"]], [])
+
+    it "reads nested quotes as (quote (quote foo))" $
+      readSExpr [Quote, Quote, Atom "foo"]
+        `shouldBe` Right (List [Symbol "quote", List [Symbol "quote", Symbol "foo"]], [])
+
+    it "fails on dangling Quote token" $
+      readSExpr [Quote]
+        `shouldBe` Left UnexpectedEOF
+
+    it "preserves leftover tokens after quote" $
+      readSExpr [Quote, Atom "foo", Atom "bar"]
+        `shouldBe` Right (List [Symbol "quote", Symbol "foo"], [Atom "bar"])
+
   describe "leftover tokens" $ do
     it "returns tokens after a single atom as leftovers, not an error" $
       readSExpr [Atom "foo", Atom "bar"] `shouldBe` Right (Symbol "foo", [Atom "bar"])
@@ -274,6 +311,29 @@ readProgramSpec = describe "Reader.readProgram" $ do
             [ Symbol "foo"
             , Symbol "bar"
             ]
+
+  describe "quote shorthand" $ do
+    it "reads 'foo as (quote foo)" $
+      readProgram "'foo"
+        `shouldBe` Right [List [Symbol "quote", Symbol "foo"]]
+
+    it "reads '(a b) as (quote (a b))" $
+      readProgram "'(a b)"
+        `shouldBe` Right [List [Symbol "quote", List [Symbol "a", Symbol "b"]]]
+
+    it "reads multiple quoted forms independently" $
+      readProgram "'a 'b"
+        `shouldBe` Right
+          [ List [Symbol "quote", Symbol "a"]
+          , List [Symbol "quote", Symbol "b"]
+          ]
+
+    it "reads quoted list followed by normal form" $
+      readProgram "'(x) y"
+        `shouldBe` Right
+          [ List [Symbol "quote", List [Symbol "x"]]
+          , Symbol "y"
+          ]
 
   describe "errors" $ do
     it "fails on a stray close paren after a valid form" $
