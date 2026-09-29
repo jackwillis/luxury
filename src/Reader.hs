@@ -20,6 +20,7 @@ import SExpr (SExpr(..))
 data Token
   = LParen
   | RParen
+  | Quote
   | Atom String
   deriving (Eq, Show)
 
@@ -32,6 +33,7 @@ data ReaderError
 renderToken :: Token -> String
 renderToken LParen      = "("
 renderToken RParen      = ")"
+renderToken Quote       = "'"
 renderToken (Atom text) = text
 
 renderTokens :: [Token] -> String
@@ -48,8 +50,9 @@ tokenize "" = []
 tokenize programText@(first:rest)
   | isSpace first = tokenize rest
   | first == ';'  = tokenize (dropRestOfCurrentLine rest)
-  | first == '('  = LParen : tokenize rest
-  | first == ')'  = RParen : tokenize rest
+  | first == '('  = LParen  : tokenize rest
+  | first == ')'  = RParen  : tokenize rest
+  | first == '\'' = Quote   : tokenize rest
   | otherwise     =
     let (atomText, remainingProgramText) = break isTokenDelimiter programText
     in Atom atomText : tokenize remainingProgramText
@@ -63,7 +66,7 @@ tokenize programText@(first:rest)
       char `elem` nonSpaceDelimiters || isSpace char
 
     nonSpaceDelimiters :: [Char]
-    nonSpaceDelimiters = "();"
+    nonSpaceDelimiters = "();'"
 
 
 -- reads one complete expression from the front of the tokens, returning
@@ -80,6 +83,17 @@ readSExpr (RParen : _) =
 -- an atom is a complete expression on its own
 readSExpr (Atom text : rest) =
   Right (readAtom text, rest)
+
+-- quote shorthand reads the following datum and expands it to (quote datum)
+readSExpr (Quote : rest) = do
+  (expression, remainingTokens) <- readSExpr rest
+  Right
+    ( SExpr.List
+        [ SExpr.Symbol "quote"
+        , expression
+        ]
+    , remainingTokens
+    )
 
 -- an open paren starts a list; read its contents up to the matching close
 readSExpr (LParen : rest) = do
