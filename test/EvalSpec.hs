@@ -50,21 +50,39 @@ spec = describe "Eval.eval" $ do
         `shouldBe` Right (Value.Number (ExactInteger 3))
 
   describe "comparison operations" $ do
-    it "evaluates (= 1 1) to #t" $
-      eval (SExpr.List [SExpr.Symbol "=", SExpr.Number (ExactInteger 1), SExpr.Number (ExactInteger 1)])
-        `shouldBe` Right (Value.Boolean True)
+    describe "binary comparisons" $ do
+      it "evaluates (= 1 1) to #t" $
+        eval (SExpr.List [SExpr.Symbol "=", SExpr.Number (ExactInteger 1), SExpr.Number (ExactInteger 1)])
+          `shouldBe` Right (Value.Boolean True)
 
-    it "evaluates (= 1 2) to #f" $
-      eval (SExpr.List [SExpr.Symbol "=", SExpr.Number (ExactInteger 1), SExpr.Number (ExactInteger 2)])
-        `shouldBe` Right (Value.Boolean False)
+      it "evaluates (= 1 2) to #f" $
+        eval (SExpr.List [SExpr.Symbol "=", SExpr.Number (ExactInteger 1), SExpr.Number (ExactInteger 2)])
+          `shouldBe` Right (Value.Boolean False)
 
-    it "evaluates (< 1 2) to #t" $
-      eval (SExpr.List [SExpr.Symbol "<", SExpr.Number (ExactInteger 1), SExpr.Number (ExactInteger 2)])
-        `shouldBe` Right (Value.Boolean True)
+      it "evaluates (< 1 2) to #t" $
+        eval (SExpr.List [SExpr.Symbol "<", SExpr.Number (ExactInteger 1), SExpr.Number (ExactInteger 2)])
+          `shouldBe` Right (Value.Boolean True)
 
-    it "evaluates (> 2 1) to #t" $
-      eval (SExpr.List [SExpr.Symbol ">", SExpr.Number (ExactInteger 2), SExpr.Number (ExactInteger 1)])
-        `shouldBe` Right (Value.Boolean True)
+      it "evaluates (> 2 1) to #t" $
+        eval (SExpr.List [SExpr.Symbol ">", SExpr.Number (ExactInteger 2), SExpr.Number (ExactInteger 1)])
+          `shouldBe` Right (Value.Boolean True)
+
+    describe "variadic comparisons (R7RS)" $ do
+      it "evaluates (< 1 2 3) to #t" $
+        eval (SExpr.List [SExpr.Symbol "<", SExpr.Number (ExactInteger 1), SExpr.Number (ExactInteger 2), SExpr.Number (ExactInteger 3)])
+          `shouldBe` Right (Value.Boolean True)
+
+      it "evaluates (< 1 3 2) to #f" $
+        eval (SExpr.List [SExpr.Symbol "<", SExpr.Number (ExactInteger 1), SExpr.Number (ExactInteger 3), SExpr.Number (ExactInteger 2)])
+          `shouldBe` Right (Value.Boolean False)
+
+      it "evaluates (> 3 2 1) to #t" $
+        eval (SExpr.List [SExpr.Symbol ">", SExpr.Number (ExactInteger 3), SExpr.Number (ExactInteger 2), SExpr.Number (ExactInteger 1)])
+          `shouldBe` Right (Value.Boolean True)
+
+      it "evaluates (= 5 5 5) to #t" $
+        eval (SExpr.List [SExpr.Symbol "=", SExpr.Number (ExactInteger 5), SExpr.Number (ExactInteger 5), SExpr.Number (ExactInteger 5)])
+          `shouldBe` Right (Value.Boolean True)
 
   describe "special forms" $ do
     describe "quote" $ do
@@ -232,13 +250,48 @@ spec = describe "Eval.eval" $ do
       eval (SExpr.Number (InexactReal (-3.14)))
         `shouldBe` Right (Value.Number (InexactReal (-3.14)))
 
+  describe "arithmetic type preservation (R7RS)" $ do
     it "handles mixed integer/float arithmetic: (+ 1 2.5)" $
       eval (SExpr.List [SExpr.Symbol "+", SExpr.Number (ExactInteger 1), SExpr.Number (InexactReal 2.5)])
         `shouldBe` Right (Value.Number (InexactReal 3.5))
 
+    it "preserves exact type for exact operands: (+ 1 2)" $
+      eval (SExpr.List [SExpr.Symbol "+", SExpr.Number (ExactInteger 1), SExpr.Number (ExactInteger 2)])
+        `shouldBe` Right (Value.Number (ExactInteger 3))
+
+    it "returns exact for exact multiplication: (* 6 7)" $
+      eval (SExpr.List [SExpr.Symbol "*", SExpr.Number (ExactInteger 6), SExpr.Number (ExactInteger 7)])
+        `shouldBe` Right (Value.Number (ExactInteger 42))
+
     it "handles division resulting in float: (/ 5 2)" $
       eval (SExpr.List [SExpr.Symbol "/", SExpr.Number (ExactInteger 5), SExpr.Number (ExactInteger 2)])
         `shouldBe` Right (Value.Number (InexactReal 2.5))
+
+    it "division with float operand returns float: (/ 5.0 2)" $
+      eval (SExpr.List [SExpr.Symbol "/", SExpr.Number (InexactReal 5.0), SExpr.Number (ExactInteger 2)])
+        `shouldBe` Right (Value.Number (InexactReal 2.5))
+
+    it "subtraction preserves exact: (- 10 3)" $
+      eval (SExpr.List [SExpr.Symbol "-", SExpr.Number (ExactInteger 10), SExpr.Number (ExactInteger 3)])
+        `shouldBe` Right (Value.Number (ExactInteger 7))
+
+  describe "quote edge cases" $ do
+    it "evaluates (quote (quote x)) to quoted symbol" $
+      eval (SExpr.List [SExpr.Symbol "quote", SExpr.List [SExpr.Symbol "quote", SExpr.Symbol "x"]])
+        `shouldBe` Right (Value.List [Value.Symbol "quote", Value.Symbol "x"])
+
+    it "evaluates (quote ((+ 1 2))) to quoted nested list" $
+      eval (SExpr.List [SExpr.Symbol "quote", SExpr.List [SExpr.List [SExpr.Symbol "+", SExpr.Number (ExactInteger 1), SExpr.Number (ExactInteger 2)]]])
+        `shouldBe` Right (Value.List [Value.List [Value.Symbol "+", Value.Number (ExactInteger 1), Value.Number (ExactInteger 2)]])
+
+  describe "if lazy evaluation (R7RS)" $ do
+    it "evaluates (if #t 1 2) without evaluating else branch" $
+      eval (SExpr.List [SExpr.Symbol "if", SExpr.Boolean True, SExpr.Number (ExactInteger 1), SExpr.List [SExpr.Symbol "undefined-op"]])
+        `shouldBe` Right (Value.Number (ExactInteger 1))
+
+    it "evaluates (if #f 1 2) without evaluating then branch" $
+      eval (SExpr.List [SExpr.Symbol "if", SExpr.Boolean False, SExpr.List [SExpr.Symbol "undefined-op"], SExpr.Number (ExactInteger 2)])
+        `shouldBe` Right (Value.Number (ExactInteger 2))
 
   describe "errors" $ do
     it "fails on an empty list" $
