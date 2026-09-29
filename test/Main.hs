@@ -1,14 +1,17 @@
 module Main where
 
+import Test.Hspec (hspec)
+
+import qualified EnvSpec
 import qualified EvalSpec
 import qualified ReaderSpec
 import qualified SExprSpec
-import Test.Hspec (hspec)
 import qualified ValueSpec
 
 main :: IO ()
 main = hspec $ do
-  SExprSpec.spec
-  ReaderSpec.spec
-  ValueSpec.spec
+  EnvSpec.spec
   EvalSpec.spec
+  ReaderSpec.spec
+  SExprSpec.spec
+  ValueSpec.spec

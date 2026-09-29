@@ -5,11 +5,12 @@ module Eval
   , renderEvalError
   ) where
 
-import Env (Env, lookup)
-import Number (Number(..))
-import SExpr (SExpr(..), render)
-import Value (Value(..))
-
+import Env (Env)
+import qualified Env
+import SExpr (SExpr(..))
+import qualified SExpr
+import Value (Value)
+import qualified Value
 
 data EvalError
   = UnboundVariable String
