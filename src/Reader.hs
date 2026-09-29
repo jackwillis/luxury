@@ -76,7 +76,7 @@ readBoolean text =
     "#T"  -> Just True
     "#f"  -> Just False
     "#F"  -> Just False
-    otherwise -> Nothing
+    _     -> Nothing
 
 readNumber :: String -> Maybe SExpr
 readNumber text =
