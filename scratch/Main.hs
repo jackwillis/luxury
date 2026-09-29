@@ -1,7 +1,8 @@
 module Main where
 
 import System.Console.Haskeline (InputT, defaultSettings, outputStrLn, runInputT)
-import SExpr (Number(..), SExpr(..), render)
+import Number (Number(..))
+import SExpr (SExpr(..), render)
 import qualified Eval
 import qualified Reader
 import qualified Value

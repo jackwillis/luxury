@@ -1,7 +1,6 @@
 -- reader-level representation
 module SExpr
   ( SExpr(..)
-  , Number(..)
   , render
   ) where
 

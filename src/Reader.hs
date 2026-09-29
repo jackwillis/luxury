@@ -13,7 +13,8 @@ import Data.Char (isSpace)
 import Data.Maybe (fromMaybe)
 import Text.Read (readMaybe)
 
-import SExpr (Number(..), SExpr(..))
+import Number (Number(..))
+import SExpr (SExpr(..))
 
 data Token
   = LParen
@@ -109,13 +110,13 @@ readNumber :: String -> Maybe SExpr
 readNumber text =
   SExpr.Number <$> ((readInteger text) <|> (readReal text))
 
-readInteger :: String -> Maybe SExpr.Number
+readInteger :: String -> Maybe Number
 readInteger text =
-  SExpr.ExactInteger <$> readMaybe text
+  ExactInteger <$> readMaybe text
 
-readReal :: String -> Maybe SExpr.Number
+readReal :: String -> Maybe Number
 readReal text =
-  SExpr.InexactReal <$> readMaybe text
+  InexactReal <$> readMaybe text
 
 
 -- reads a whole program as a sequence of top-level forms, not a single

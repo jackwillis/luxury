@@ -1,5 +1,6 @@
 module SExprSpec (spec) where
 
+import Number (Number(..))
 import SExpr
 import Test.Hspec
 

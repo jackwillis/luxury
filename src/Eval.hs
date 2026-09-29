@@ -4,7 +4,8 @@ module Eval
   , eval
   ) where
 
-import SExpr (SExpr(..), Number(..))
+import Number (Number(..))
+import SExpr (SExpr(..))
 import qualified Value
 
 data EvalError

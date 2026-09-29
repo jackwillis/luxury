@@ -1,6 +1,7 @@
 module ReaderSpec (spec) where
 
 import Reader
+import Number (Number(..))
 import SExpr
 import Test.Hspec
 
