@@ -2,7 +2,9 @@ module Main where
 
 import System.Console.Haskeline (InputT, defaultSettings, outputStrLn, runInputT)
 import SExpr (Number(..), SExpr(..), render)
+import qualified Eval
 import qualified Reader
+import qualified Value
 
 main :: IO ()
 main = runInputT defaultSettings scratchDemo
@@ -22,9 +24,34 @@ scratchDemo = do
   showTokens "(def foo 2) foo"
   showTokens "(a (b c))"
 
+  banner "reading"
+  showReadProgram "(+ 2 3)"
+  showReadProgram "42 #t 1.5"
+  showReadProgram "(foo"
+  showReadProgram "foo )"
+
+  banner "evaluation"
+  showEval $ Number (ExactInteger 7)
+  showEval $ Number (InexactReal 2.5)
+  showEval $ Boolean False
+  showEval $ List [Symbol "+", Number (ExactInteger 1), Number (ExactInteger 2)]
+  showEval $ Symbol "foo"
+
 showTokens :: String -> InputT IO ()
 showTokens source =
   outputStrLn $ "tokenize " <> show source <> " = " <> show (Reader.tokenize source)
+
+showReadProgram :: String -> InputT IO ()
+showReadProgram source =
+  outputStrLn $ "readProgram " <> show source <> " = " <> case Reader.readProgram source of
+    Left readerError  -> Reader.renderReaderError readerError
+    Right expressions -> show expressions
+
+showEval :: SExpr -> InputT IO ()
+showEval expression =
+  outputStrLn $ "eval " <> show expression <> " = " <> case Eval.eval expression of
+    Left evalError -> show evalError
+    Right value    -> Value.render value
 
 
 banner :: String -> InputT IO ()

@@ -13,6 +13,10 @@ data Value
   deriving (Eq, Show)
 
 render :: Value -> String
-render (Number number) = Number.render number
-render (Boolean True)  = "#t"
-render (Boolean False) = "#f"
+render (Number number) =
+  Number.render number
+
+render (Boolean valence) =
+  case valence of
+    True  -> "#t"
+    False -> "#f"

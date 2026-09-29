@@ -10,5 +10,8 @@ data Number
   deriving (Eq, Show)
 
 render :: Number -> String
-render (ExactInteger quantity) = show quantity
-render (InexactReal quantity)  = show quantity
+render (ExactInteger quantity) =
+  show quantity
+
+render (InexactReal quantity) =
+  show quantity
