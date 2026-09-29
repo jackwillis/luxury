@@ -1,6 +1,7 @@
 -- runtime representation
 module Value
-  ( Value(..)
+  ( Primitive(..)
+  , Value(..)
   , render
   ) where
 
@@ -12,8 +13,17 @@ data Value
   = Number Number
   | Boolean Bool
   | Symbol String
-  | Pair Value Value
   | EmptyList
+  | Pair Value Value
+  | PrimitiveProcedure Primitive
+  deriving (Eq, Show)
+
+data Primitive
+  = Cons
+  | Car
+  | Cdr
+  | PairP
+  | NullP
   deriving (Eq, Show)
 
 render :: Value -> String
@@ -33,16 +43,27 @@ render EmptyList =
 
 render pair@(Pair _ _) =
   "(" <> renderPair pair <> ")"
+  where
+    renderPair :: Value -> String
+    renderPair (Pair first EmptyList) =
+      render first
 
-renderPair :: Value -> String
-renderPair (Pair first EmptyList) =
-  render first
+    renderPair (Pair first rest@(Pair _ _)) =
+      render first <> " " <> renderPair rest
 
-renderPair (Pair first rest@(Pair _ _)) =
-  render first <> " " <> renderPair rest
+    renderPair (Pair first rest) =
+      render first <> " . " <> render rest
 
-renderPair (Pair first rest) =
-  render first <> " . " <> render rest
+    renderPair value =
+      render value
 
-renderPair value =
-  render value
+render (PrimitiveProcedure primitive) =
+  "#<primitive:" <> renderPrimitive primitive <> ">"
+  where
+    renderPrimitive primitive =
+      case primitive of
+        Cons  -> "cons"
+        Car   -> "car"
+        Cdr   -> "cdr"
+        PairP -> "pair?"
+        NullP -> "null?"
