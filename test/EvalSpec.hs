@@ -24,17 +24,9 @@ spec = describe "Eval.eval" $ do
       eval (SExpr.Boolean False) `shouldBe` Right (Value.Boolean False)
 
   describe "symbols" $ do
-    it "evaluates a symbol to itself as a symbol value" $
+    it "cannot yet evaluate a bare symbol (needs environment)" $
       eval (SExpr.Symbol "foo")
-        `shouldBe` Right (Value.Symbol "foo")
-
-    it "evaluates the symbol 'true' to #t" $
-      eval (SExpr.Symbol "true")
-        `shouldBe` Right (Value.Boolean True)
-
-    it "evaluates the symbol 'false' to #f" $
-      eval (SExpr.Symbol "false")
-        `shouldBe` Right (Value.Boolean False)
+        `shouldBe` Left (CannotEvaluate (SExpr.Symbol "foo"))
 
   describe "arithmetic operations" $ do
     it "evaluates (+ 1 2) to 3" $
