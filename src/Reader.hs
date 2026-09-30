@@ -126,11 +126,14 @@ readListContents tokens = do
 -- Unsupported datum syntax is an error, rather than an arbitrary symbol.
 readAtom :: String -> Either ReaderError SExpr
 readAtom text =
-  case readBoolean text <|> readNumber text of
+  case readBoolean text <|> readNumber text <|> readSymbol text of
     Just value -> Right value
-    Nothing
-      | validIdentifier text -> Right (SExpr.Symbol text)
-      | otherwise -> Left (InvalidAtom text)
+    Nothing -> Left (InvalidAtom text)
+
+readSymbol :: String -> Maybe SExpr
+readSymbol text
+  | validIdentifier text = Just (SExpr.Symbol text)
+  | otherwise = Nothing
 
 readBoolean :: String -> Maybe SExpr
 readBoolean text =
