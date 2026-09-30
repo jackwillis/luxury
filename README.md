@@ -39,7 +39,9 @@ cabal test
 cabal run ilux
 ```
 
-`ilux` is the interactive interpreter. Try a quoted list:
+`ilux` is the interactive interpreter. It saves input history in
+`~/.ilux_history`, so you can recall earlier entries with the arrow keys across
+sessions. History is saved when you exit with Ctrl-D. Try a quoted list:
 
 ```scheme
 '(hello scheme)

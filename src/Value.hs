@@ -24,6 +24,8 @@ data Primitive
   | Cdr
   | PairP
   | NullP
+  | EqP
+  | EqvP
   deriving (Eq, Show)
 
 render :: Value -> String
@@ -67,3 +69,5 @@ render (PrimitiveProcedure primitive) =
         Cdr   -> "cdr"
         PairP -> "pair?"
         NullP -> "null?"
+        EqP   -> "eq?"
+        EqvP  -> "eqv?"

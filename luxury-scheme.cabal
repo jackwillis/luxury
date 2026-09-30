@@ -21,7 +21,7 @@ executable ilux
     main-is:          Main.hs
     hs-source-dirs:   ilux
     default-language: GHC2024
-    build-depends:    base, haskeline, luxury-scheme
+    build-depends:    base, directory, filepath, haskeline, luxury-scheme
 
 test-suite luxury-scheme-test
     type:             exitcode-stdio-1.0

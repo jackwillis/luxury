@@ -6,9 +6,12 @@ import System.Console.Haskeline
   ( InputT
   , defaultSettings
   , getInputLine
+  , historyFile
   , outputStrLn
   , runInputT
   )
+import System.Directory (getHomeDirectory)
+import System.FilePath ((</>))
 import Text.Printf (printf)
 
 import Env (Env)
@@ -20,10 +23,14 @@ import qualified Value
 
 
 main :: IO ()
-main =
-  runInputT defaultSettings (loop Env.initial 1)
+main = do
+  homeDirectory <- getHomeDirectory
+  let haskelineSettings = defaultSettings
+        { historyFile = Just (homeDirectory </> ".ilux_history") }
+  runInputT haskelineSettings (loop Env.initial 1)
 
 
+-- Main REPL loop
 loop :: Env -> Int -> InputT IO ()
 loop env promptCount = do
   let prompt = printf "ilux:%03d> " promptCount
@@ -31,7 +38,7 @@ loop env promptCount = do
 
   case lineOrEof of
     Nothing ->
-      outputStrLn "Goodbye"
+      pure ()  -- EOF, exit the REPL
 
     Just userInput -> do
       case toMaybeLine userInput of
@@ -39,10 +46,11 @@ loop env promptCount = do
           readEvaluatePrint env line
 
         Nothing ->
-          pure ()
+          pure ()  -- Ignore empty lines
 
       loop env (promptCount + 1)
 
+-- Read, evaluate, and print the result of a single line of user input.
 readEvaluatePrint :: Env -> String -> InputT IO ()
 readEvaluatePrint env line = do
   let readerResult = readProgram line
@@ -64,11 +72,11 @@ evaluatePrint env expression =
       outputStrLn (Value.render value)
 
 
+-- drop empty lines and trim whitespace
 toMaybeLine :: String -> Maybe String
 toMaybeLine userEntry
   | all isSpace userEntry = Nothing
   | otherwise             = Just (trimWhitespace userEntry)
-
-trimWhitespace :: String -> String
-trimWhitespace =
-  dropWhileEnd isSpace . dropWhile isSpace
+  where
+    trimWhitespace =
+      dropWhileEnd isSpace . dropWhile isSpace

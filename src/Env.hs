@@ -32,6 +32,8 @@ initial =
     , ("cdr",   Value.PrimitiveProcedure Value.Cdr)
     , ("pair?", Value.PrimitiveProcedure Value.PairP)
     , ("null?", Value.PrimitiveProcedure Value.NullP)
+    , ("eq?",   Value.PrimitiveProcedure Value.EqP)
+    , ("eqv?",  Value.PrimitiveProcedure Value.EqvP)
     ]
 
 fromList :: [(String, Value)] -> Env
