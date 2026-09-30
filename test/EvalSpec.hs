@@ -3,6 +3,7 @@ module EvalSpec (spec) where
 import qualified Env
 import Eval
 import Number (Number(..))
+import qualified Reader
 import qualified SExpr
 import Test.Hspec
 import qualified Value
@@ -18,6 +19,7 @@ list (x:xs) = Value.Pair x (list xs)
 
 spec :: Spec
 spec = describe "Eval.eval" $ do
+  primitiveApplicationSpec
   describe "literals" $ do
     it "evaluates an exact integer to itself" $
       evalEmpty (SExpr.Number (ExactInteger 42))
@@ -783,3 +785,72 @@ spec = describe "Eval.eval" $ do
               ]
       in evalEmpty form
            `shouldBe` Left (CannotEvaluate form)
+
+primitiveApplicationSpec :: Spec
+primitiveApplicationSpec = describe "primitive application" $ do
+  let first = Value.Symbol "a"
+      rest = Value.Symbol "b"
+      pair = Value.Pair first rest
+      call primitive = apply (Value.PrimitiveProcedure primitive)
+      run source = case Reader.readProgram source of
+        Right [expression] -> eval Env.initial expression
+        result -> error (show result)
+
+  it "cons constructs a pair with any cdr" $
+    call Value.Cons [first, rest] `shouldBe` Right pair
+  it "car selects the first value" $
+    call Value.Car [pair] `shouldBe` Right first
+  it "cdr selects the second value" $
+    call Value.Cdr [pair] `shouldBe` Right rest
+  mapM_ (\value -> do
+    it ("pair? classifies " <> show value) $
+      call Value.PairP [value] `shouldBe` Right (Value.Boolean (value == pair))
+    it ("null? classifies " <> show value) $
+      call Value.NullP [value] `shouldBe` Right (Value.Boolean (value == Value.EmptyList)))
+    [pair, Value.EmptyList, first, Value.Boolean False, Value.PrimitiveProcedure Value.Car]
+  mapM_ (\primitive -> do
+    it ("rejects a non-pair for " <> show primitive) $
+      call primitive [first] `shouldBe` Left (ExpectedPair primitive first)
+    it ("rejects the empty list for " <> show primitive) $
+      call primitive [Value.EmptyList] `shouldBe` Left (ExpectedPair primitive Value.EmptyList))
+    [Value.Car, Value.Cdr]
+  mapM_ (\(primitive, expected) ->
+    mapM_ (\count -> it ("rejects " <> show count <> " arguments for " <> show primitive) $
+      call primitive (replicate count first) `shouldBe` Left (WrongArity primitive expected count))
+      (filter (/= expected) [0 .. 3]))
+    [(Value.Cons, 2), (Value.Car, 1), (Value.Cdr, 1), (Value.PairP, 1),
+     (Value.NullP, 1), (Value.EqP, 2), (Value.EqvP, 2)]
+  mapM_ (\primitive -> it ("reports deferred implementation of " <> show primitive) $
+    call primitive [first, rest] `shouldBe` Left (UnimplementedPrimitive primitive))
+    [Value.EqP, Value.EqvP]
+  it "rejects a non-procedure value" $
+    apply first [rest] `shouldBe` Left (NotProcedure first)
+  it "evaluates nested calls and quoted arguments" $
+    run "(car (cons 'a 'b))" `shouldBe` Right first
+  it "evaluates a quoted list argument" $
+    run "(cdr '(a b))" `shouldBe` Right (list [rest])
+  it "evaluates a computed operator" $
+    run "((car (cons car '())) '(a b))" `shouldBe` Right first
+  it "supports a primitive bound under another name" $
+    eval (Env.bind "head" (Value.PrimitiveProcedure Value.Car) Env.initial)
+      (SExpr.List [SExpr.Symbol "head", SExpr.List [SExpr.Symbol "quote", SExpr.List [SExpr.Symbol "a"]]])
+      `shouldBe` Right first
+  it "reports an unbound operator before its arguments" $
+    run "(missing also-missing)" `shouldBe` Left (UnboundVariable "missing")
+  it "propagates an argument evaluation failure" $
+    run "(cons 'a missing)" `shouldBe` Left (UnboundVariable "missing")
+  it "reports a non-procedure operator" $
+    run "(#t 1)" `shouldBe` Left (NotProcedure (Value.Boolean True))
+  it "reports wrong argument types through eval" $
+    run "(car #f)" `shouldBe` Left (ExpectedPair Value.Car (Value.Boolean False))
+  it "renders a non-procedure error" $
+    renderEvalError (NotProcedure first) `shouldBe` "Expected a procedure, received: a"
+  it "renders an arity error" $
+    renderEvalError (WrongArity Value.Cons 2 0)
+      `shouldBe` "#<primitive:cons> expected 2 arguments, received 0"
+  it "renders a pair error" $
+    renderEvalError (ExpectedPair Value.Car first)
+      `shouldBe` "#<primitive:car> expected a pair, received: a"
+  it "renders an unimplemented primitive error" $
+    renderEvalError (UnimplementedPrimitive Value.EqP)
+      `shouldBe` "Not implemented: #<primitive:eq?>"
