@@ -2,6 +2,8 @@ cabal-version:      3.0
 name:               luxury-scheme
 version:            0.1.0.0
 build-type:         Simple
+license:            MIT
+license-file:       LICENSE
 
 library
     hs-source-dirs:   src

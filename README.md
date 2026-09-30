@@ -1,51 +1,60 @@
 # Luxury Scheme
 
-Luxury is an experimental Scheme interpreter written in Haskell.
+Luxury is a little Scheme interpreter written in Haskell, built for fun and to
+learn how languages work. The name is a nod to the eventual goal: a small language
+with a comfortable REPL and useful tools around it.
 
-It is currently a small educational tree-walking interpreter, built incrementally toward R7RS semantics. The longer-term idea is more ambitious: **a small Scheme with an unusually capable runtime and excellent developer experience.**
+## Where it is now
 
-Today, Luxury has a reader, runtime values, a REPL, and early evaluation support including `quote`. Much of the test suite intentionally describes behavior that has not been implemented yet.
+It's an early tree-walking interpreter. It has a reader, runtime values,
+environment lookup, and evaluation of numbers, booleans, and quoted data.
+Procedure calls, definitions, and closures are still on the to-do list.
 
-## What would make it “Luxury”?
+R7RS-small is the target, but Luxury isn't a complete Scheme implementation yet.
 
-Aspirationally, Luxury should combine Scheme’s small core with some of the best affordances from Haskell, Ruby, Smalltalk, and practical Lisps:
+## Things I'd like to try
 
-- a Pry/IRB-like live REPL
-- excellent errors and source diagnostics
-- built-in testing, property testing, benchmarking, and profiling
-- strong lazy programming support without making ordinary Scheme evaluation lazy
-- lightweight concurrency, cancellation, STM, and runtime supervision
-- a language server that can connect to the live runtime
-- resource-aware script execution
-- optional tracing and provenance
-- curated batteries for things like SQLite, JSON, HTTP, and document processing
-- a future bytecode VM implemented safely in Haskell
+- More of Scheme, starting with procedures, closures, and core control forms
+- Useful libraries from the Scheme and SRFI ecosystem
+- Clear errors and ways to inspect values and running code
+- A REPL that makes it easy to poke around and experiment
+- Scheme-side testing tools with helpful failure messages
+- Eventually, perhaps a compiler and bytecode VM
 
-The goal is not a large language core. It is a **small language with a capable runtime, rich standard environment, and unusually good affordances**.
+Scheme sets the language direction, and Haskell shapes the implementation.
+The interactive side takes inspiration from Lisp environments and Ruby's
+IRB/Pry: exploring values, looking up source, and trying things in a running
+session. Those are ideas for where the REPL could go, not features it has today.
 
-## Why Haskell?
+The longer notes are in [DESIGN.md](DESIGN.md) and [ROADMAP.md](ROADMAP.md).
+They're a collection of ideas, not a promise to build everything.
 
-Haskell is part of the design, not just the implementation language.
+## Build and run
 
-Luxury aims to take advantage of:
-
-- garbage collection
-- arbitrary-precision numbers
-- laziness and call-by-need
-- lightweight threads
-- STM and structured concurrency primitives
-- strong algebraic data types
-- profiling and heap tooling
-- a mature library ecosystem
-
-Scheme semantics still come first. Haskell’s strengths should make Luxury nicer to use without quietly changing what Scheme means.
-
-## Development
+You'll need GHC with GHC2024 support (9.10 or newer) and Cabal.
 
 ```bash
 cabal build
 cabal test
-cabal run luxury
+cabal run ilux
 ```
 
-Luxury is a learning project first, so semantics are established carefully in the simple interpreter before more advanced runtime machinery is added.
+`ilux` is the interactive interpreter. Try a quoted list:
+
+```scheme
+'(hello scheme)
+```
+
+`luxury` reads a file or standard input and prints the results:
+
+```bash
+cabal run luxury -- example.scm
+printf "'(hello scheme)\n" | cabal run luxury
+```
+
+Some tests describe behavior that hasn't been implemented yet, so the suite may
+have failures while the evaluator is being built out.
+
+## License
+
+[MIT](LICENSE). Feel free to use it, change it, or learn from it.
