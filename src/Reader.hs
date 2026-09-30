@@ -9,7 +9,7 @@ module Reader
   ) where
 
 import Control.Applicative ((<|>))
-import Data.Char (isSpace)
+import Data.Char (isAsciiLower, isAsciiUpper, isSpace, toLower)
 import Data.Maybe (fromMaybe)
 import Text.Read (readMaybe)
 
@@ -28,6 +28,7 @@ data ReaderError
   = UnexpectedEOF
   | UnexpectedRParen
   | UnterminatedList
+  | InvalidAtom String
   deriving (Eq, Show)
 
 renderToken :: Token -> String
@@ -43,6 +44,7 @@ renderReaderError :: ReaderError -> String
 renderReaderError UnexpectedEOF     = "Unexpected end of input."
 renderReaderError UnexpectedRParen  = "Unexpected ')'."
 renderReaderError UnterminatedList  = "Unterminated list; expected ')'."
+renderReaderError (InvalidAtom text) = "Invalid or unsupported atom: " <> text
 
 
 tokenize :: String -> [Token]
@@ -81,8 +83,9 @@ readSExpr (RParen : _) =
   Left UnexpectedRParen
 
 -- an atom is a complete expression on its own
-readSExpr (Atom text : rest) =
-  Right (readAtom text, rest)
+readSExpr (Atom text : rest) = do
+  expression <- readAtom text
+  Right (expression, rest)
 
 -- quote shorthand reads the following datum and expands it to (quote datum)
 readSExpr (Quote : rest) = do
@@ -119,38 +122,90 @@ readListContents tokens = do
   Right (firstExpression : restExpressions, finalTokens)
 
 
--- classifies a single atom's text as a boolean, a number, or (falling back)
--- a symbol; order matters, since a bare "-" or "4.2.3" must fall through to
--- readNumber's failure before landing on Symbol
-readAtom :: String -> SExpr
+-- Validate Scheme syntax before converting numeric text with Haskell's reader.
+-- Unsupported datum syntax is an error, rather than an arbitrary symbol.
+readAtom :: String -> Either ReaderError SExpr
 readAtom text =
-  fromMaybe (readSymbol text) $
-        readBoolean text
-    <|> readNumber text
-
-readSymbol :: String -> SExpr
-readSymbol name = SExpr.Symbol name
+  case readBoolean text <|> readNumber text of
+    Just value -> Right value
+    Nothing
+      | validIdentifier text -> Right (SExpr.Symbol text)
+      | otherwise -> Left (InvalidAtom text)
 
 readBoolean :: String -> Maybe SExpr
 readBoolean text =
-  SExpr.Boolean <$> case text of
-    "#t"  -> Just True
-    "#T"  -> Just True
-    "#f"  -> Just False
-    "#F"  -> Just False
-    _     -> Nothing
+  SExpr.Boolean <$> case map toLower text of
+    "#t"     -> Just True
+    "#true"  -> Just True
+    "#f"     -> Just False
+    "#false" -> Just False
+    _        -> Nothing
+
+-- The unescaped ASCII identifier grammar from R7RS section 7.1.1.
+-- Escaped identifiers and additional Unicode characters are deferred.
+validIdentifier :: String -> Bool
+validIdentifier text
+  | map toLower text `elem` ["+i", "-i", "+inf.0", "-inf.0", "+nan.0", "-nan.0"] = False
+  | otherwise = case text of
+      [] -> False
+      first : rest
+        | initial first -> all subsequent rest
+        | first `elem` "+-" -> case rest of
+            [] -> True
+            '.' : next : remaining -> dotSubsequent next && all subsequent remaining
+            next : remaining -> signSubsequent next && all subsequent remaining
+        | first == '.' -> case rest of
+            next : remaining -> dotSubsequent next && all subsequent remaining
+            [] -> False
+        | otherwise -> False
+  where
+    initial char = isAsciiLower char || isAsciiUpper char || char `elem` "!$%&*/:<=>?^_~"
+    subsequent char = initial char || decimalDigit char || char `elem` "+-.@"
+    signSubsequent char = initial char || char `elem` "+-@"
+    dotSubsequent char = signSubsequent char || char == '.'
+
+decimalDigit :: Char -> Bool
+decimalDigit char = char >= '0' && char <= '9'
 
 readNumber :: String -> Maybe SExpr
-readNumber text =
-  SExpr.Number <$> ((readInteger text) <|> (readReal text))
+readNumber text = do
+  let (sign, unsigned) = case text of
+        '+' : rest -> ("", rest)
+        '-' : rest -> ("-", rest)
+        _ -> ("", text)
+      (whole, rest) = span decimalDigit unsigned
+  case rest of
+    [] | not (null whole) ->
+      SExpr.Number . ExactInteger <$> readMaybe (sign <> whole)
+    _ -> do
+      let (mantissa, suffix) = case rest of
+            '.' : afterDot ->
+              let (fraction, remaining) = span decimalDigit afterDot
+              in (fromMaybe "0" (nonempty whole) <> "." <>
+                  fromMaybe "0" (nonempty fraction), remaining)
+            _ -> (whole <> ".0", rest)
+          hasDigits = not (null whole) || case rest of
+            '.' : next : _ -> decimalDigit next
+            _ -> False
+      exponent <- readExponent suffix
+      if hasDigits
+        then SExpr.Number . InexactReal <$> readMaybe (sign <> mantissa <> exponent)
+        else Nothing
+  where
+    nonempty "" = Nothing
+    nonempty value = Just value
 
-readInteger :: String -> Maybe Number
-readInteger text =
-  ExactInteger <$> readMaybe text
-
-readReal :: String -> Maybe Number
-readReal text =
-  InexactReal <$> readMaybe text
+    readExponent "" = Just ""
+    readExponent (marker : rest)
+      | marker `elem` "eE" =
+          let (sign, digits) = case rest of
+                '+' : remaining -> ("", remaining)
+                '-' : remaining -> ("-", remaining)
+                _ -> ("", rest)
+          in if not (null digits) && all decimalDigit digits
+               then Just ("e" <> sign <> digits)
+               else Nothing
+    readExponent _ = Nothing
 
 
 -- reads a whole program as a sequence of top-level forms, not a single

@@ -11,6 +11,7 @@ spec = do
   renderReaderErrorSpec
   readSExprSpec
   readProgramSpec
+  atomBoundarySpec
 
 tokenizeSpec :: Spec
 tokenizeSpec = describe "Reader.tokenize" $ do
@@ -138,8 +139,8 @@ readSExprSpec = describe "Reader.readSExpr" $ do
     it "falls back to Symbol for a malformed number (bare minus sign)" $
       readSExpr [Atom "-"] `shouldBe` Right (Symbol "-", [])
 
-    it "falls back to Symbol for a malformed number (multiple decimal points)" $
-      readSExpr [Atom "4.2.3"] `shouldBe` Right (Symbol "4.2.3", [])
+    it "rejects multiple decimal points" $
+      readSExpr [Atom "4.2.3"] `shouldBe` Left (InvalidAtom "4.2.3")
 
   describe "booleans" $ do
     it "reads #t as True" $
@@ -154,8 +155,8 @@ readSExprSpec = describe "Reader.readSExpr" $ do
     it "reads #F as False" $
       readSExpr [Atom "#F"] `shouldBe` Right (Boolean False, [])
 
-    it "falls back to Symbol for a non-boolean # atom" $
-      readSExpr [Atom "#nope"] `shouldBe` Right (Symbol "#nope", [])
+    it "rejects an unknown hash-prefixed atom" $
+      readSExpr [Atom "#nope"] `shouldBe` Left (InvalidAtom "#nope")
 
   describe "number edge cases (R7RS subset)" $ do
     it "reads zero" $
@@ -177,10 +178,10 @@ readSExprSpec = describe "Reader.readSExpr" $ do
       readSExpr [Atom "-0.0001"] `shouldBe` Right (Number (InexactReal (-0.0001)), [])
 
     it "reads float without leading digit" $
-      readSExpr [Atom ".5"] `shouldBe` Right (Symbol ".5", [])
+      readSExpr [Atom ".5"] `shouldBe` Right (Number (InexactReal 0.5), [])
 
-    it "reads float with trailing decimal as symbol" $
-      readSExpr [Atom "3."] `shouldBe` Right (Symbol "3.", [])
+    it "reads a float with a trailing decimal point" $
+      readSExpr [Atom "3."] `shouldBe` Right (Number (InexactReal 3.0), [])
 
     it "reads leading zero integer" $
       readSExpr [Atom "007"] `shouldBe` Right (Number (ExactInteger 7), [])
@@ -191,17 +192,41 @@ readSExprSpec = describe "Reader.readSExpr" $ do
     it "reads negative zero" $
       readSExpr [Atom "-0"] `shouldBe` Right (Number (ExactInteger 0), [])
 
-    it "reads plus sign as symbol (not implemented)" $
+    it "reads plus sign as a symbol" $
       readSExpr [Atom "+"] `shouldBe` Right (Symbol "+", [])
 
-    it "reads plus prefix number as symbol (not standard R7RS parsing)" $
-      readSExpr [Atom "+5"] `shouldBe` Right (Symbol "+5", [])
+    it "reads an explicitly positive integer" $
+      readSExpr [Atom "+5"] `shouldBe` Right (Number (ExactInteger 5), [])
 
     it "reads double negative as symbol" $
       readSExpr [Atom "--5"] `shouldBe` Right (Symbol "--5", [])
 
     it "reads number with spaces as multiple tokens" $
       tokenize "1 2 3" `shouldBe` [Atom "1", Atom "2", Atom "3"]
+
+  describe "R7RS atom classification" $ do
+    mapM_ (\text -> it ("reads boolean " <> text) $
+      readProgram text `shouldBe` Right [Boolean True])
+      ["#true", "#TRUE", "#TrUe"]
+    mapM_ (\text -> it ("reads boolean " <> text) $
+      readProgram text `shouldBe` Right [Boolean False])
+      ["#false", "#FALSE", "#FaLsE"]
+    mapM_ (\(text, value) -> it ("reads decimal " <> text) $
+      readProgram text `shouldBe` Right [Number (InexactReal value)])
+      [("+.5", 0.5), ("-.5", -0.5), ("1e3", 1000),
+       ("1E-2", 0.01), ("3.e+2", 300), (".5e1", 5)]
+    mapM_ (\text -> it ("preserves identifier " <> text) $
+      readProgram text `shouldBe` Right [Symbol text])
+      ["...", "+foo", "-.foo", ".foo", "--5", "foo.bar", "set!"]
+    mapM_ (\text -> it ("rejects malformed or unsupported atom " <> text) $
+      readProgram text `shouldBe` Left (InvalidAtom text))
+      ["1e", "1e+", "1e2e3", "123abc", "#truex", "4.2.3", ".", "@foo",
+       "#xFF", "1/2", "+i", "+inf.0"]
+    it "propagates invalid atoms inside lists" $
+      readProgram "(foo 1e+)" `shouldBe` Left (InvalidAtom "1e+")
+    it "renders an invalid atom" $
+      renderReaderError (InvalidAtom "#nope")
+        `shouldBe` "Invalid or unsupported atom: #nope"
 
   describe "lists" $ do
     it "reads an empty list" $
@@ -341,3 +366,76 @@ readProgramSpec = describe "Reader.readProgram" $ do
 
     it "fails on an unterminated list" $
       readProgram "(foo" `shouldBe` Left UnterminatedList
+
+-- Exercise the public reader with independently specified syntax examples.
+atomBoundarySpec :: Spec
+atomBoundarySpec = describe "Reader atom boundaries" $ do
+  describe "decimal values and exactness" $ do
+    -- Bounded generated domain: every integer from -100 through 100.
+    -- A leading plus must preserve its exact value, including at zero.
+    it "preserves exact signed integers across -100 through 100" $
+      mapM_ (\value ->
+        let text = if value >= 0 then "+" <> show value else show value
+        in readProgram text `shouldBe` Right [Number (ExactInteger value)])
+        [-100 .. 100]
+    mapM_ (\(text, expected) -> it ("reads " <> text <> " with the right numeric type") $
+      readProgram text `shouldBe` Right [Number expected])
+      [ ("+0007", ExactInteger 7)
+      , ("-0007", ExactInteger (-7))
+      , ("+0", ExactInteger 0)
+      , ("123456789012345678901234567890", ExactInteger 123456789012345678901234567890)
+      , ("+3.", InexactReal 3)
+      , ("-3.", InexactReal (-3))
+      , ("0e0", InexactReal 0)
+      , ("1e0", InexactReal 1)
+      , ("-2E+3", InexactReal (-2000))
+      , ("+.25E-1", InexactReal 0.025)
+      , ("0002.50e02", InexactReal 250)
+      , ("1e-100", InexactReal 1e-100)
+      ]
+    it "preserves the sign of inexact negative zero" $
+      case readProgram "-0.0" of
+        Right [Number (InexactReal value)] -> isNegativeZero value `shouldBe` True
+        result -> expectationFailure ("Expected inexact negative zero, got " <> show result)
+
+  describe "identifiers near numeric syntax" $ do
+    mapM_ (\text -> it ("keeps " <> text <> " as a case-sensitive symbol") $
+      readProgram text `shouldBe` Right [Symbol text])
+      ["Foo", "foo", "e10", "NaN", "Infinity", "+", "-", "++", "-+",
+       "+@name", "-@name", ".@name", "+..", "-..", ".+", ".-", "..",
+       "a1", "a+b-c.d@e", "list->vector"]
+    mapM_ (\char -> it ("allows initial punctuation " <> [char]) $
+      readProgram [char] `shouldBe` Right [Symbol [char]])
+      "!$%&*/:<=>?^_~"
+
+  describe "malformed decimal syntax" $ do
+    mapM_ (\text -> it ("rejects " <> text <> " without accepting a numeric prefix") $
+      readProgram text `shouldBe` Left (InvalidAtom text))
+      ["1e-", "1e++2", "1e--2", "1e2.0", "1.2.3", ".5foo", "+5foo",
+       "1_000", "1s2", "0x10", "#tfoo", "#falsehood", "#TRUE!",
+       "[foo]", "foo,bar", "foo\\bar"]
+    it "rejects an empty manually constructed atom" $
+      readSExpr [Atom ""] `shouldBe` Left (InvalidAtom "")
+
+  describe "composition and leftovers" $ do
+    it "does not consume the next atom when reading one decimal" $
+      readSExpr [Atom "+.5", Atom "#TRUE"]
+        `shouldBe` Right (Number (InexactReal 0.5), [Atom "#TRUE"])
+    it "does not validate leftover tokens when asked for one form" $
+      readSExpr [Atom "1", Atom "#oops"]
+        `shouldBe` Right (Number (ExactInteger 1), [Atom "#oops"])
+    it "does validate later atoms when reading a whole program" $
+      readProgram "1 #oops" `shouldBe` Left (InvalidAtom "#oops")
+    it "propagates an invalid atom through quote" $
+      readProgram "'1e+" `shouldBe` Left (InvalidAtom "1e+")
+    it "propagates an invalid atom through nested lists" $
+      readProgram "(ok (nested #oops))" `shouldBe` Left (InvalidAtom "#oops")
+    it "requires a delimiter between a boolean and a number" $
+      readProgram "(#TRUE+.5)" `shouldBe` Left (InvalidAtom "#TRUE+.5")
+    it "recognizes actual delimiters around booleans and numbers" $
+      readProgram "(#TRUE +.5)'#false; comment\n3."
+        `shouldBe` Right
+          [ List [Boolean True, Number (InexactReal 0.5)]
+          , List [Symbol "quote", Boolean False]
+          , Number (InexactReal 3)
+          ]
