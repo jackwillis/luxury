@@ -177,10 +177,7 @@ decimalDigit char = char >= '0' && char <= '9'
 
 readNumber :: String -> Maybe SExpr
 readNumber text = do
-  let (sign, unsigned) = case text of
-        '+' : rest -> ("", rest)
-        '-' : rest -> ("-", rest)
-        _ -> ("", text)
+  let (sign, unsigned) = readSign text
       (whole, rest) = span decimalDigit unsigned
   case rest of
     [] | not (null whole) ->
@@ -200,6 +197,12 @@ readNumber text = do
         then SExpr.Number . InexactReal <$> readMaybe (sign <> mantissa <> exponent)
         else Nothing
   where
+    -- Strip a leading sign, retaining only minus for Haskell's numeric reader.
+    readSign :: String -> (String, String)
+    readSign ('+' : rest) = ("", rest)
+    readSign ('-' : rest) = ("-", rest)
+    readSign text = ("", text)
+
     defaultIfEmpty :: String -> String -> String
     defaultIfEmpty fallback "" = fallback
     defaultIfEmpty _ text = text
@@ -208,10 +211,7 @@ readNumber text = do
     readExponent "" = Just ""
     readExponent (marker : rest)
       | marker `elem` "eE" =
-          let (sign, digits) = case rest of
-                '+' : remaining -> ("", remaining)
-                '-' : remaining -> ("-", remaining)
-                _ -> ("", rest)
+          let (sign, digits) = readSign rest
           in if not (null digits) && all decimalDigit digits
                then Just ("e" <> sign <> digits)
                else Nothing
