@@ -144,8 +144,14 @@ readBoolean text =
     "#false" -> Just False
     _        -> Nothing
 
--- The unescaped ASCII identifier grammar from R7RS section 7.1.1.
--- Escaped identifiers and additional Unicode characters are deferred.
+-- Recognizes unescaped ASCII identifiers using R7RS section 7.1.1.
+-- Ordinary names start with a letter or special punctuation (foo, set!).
+-- "Peculiar identifiers" may instead start with a sign or dot (+, -foo, ...),
+-- provided the following characters distinguish the name from numeric syntax.
+-- Numeric exceptions such as +i and +inf.0 must not become symbols merely
+-- because their number syntax is not implemented yet. Other numeric forms are
+-- handled by readNumber before this check. Escaped identifiers (|...|) and
+-- additional Unicode identifier characters are deferred.
 validIdentifier :: String -> Bool
 validIdentifier text
   | map toLower text `elem` ["+i", "-i", "+inf.0", "-inf.0", "+nan.0", "-nan.0"] = False
