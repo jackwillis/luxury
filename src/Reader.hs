@@ -188,24 +188,18 @@ readNumber text =
     _ -> readDecimal sign whole rest
   where
     -- Builds an inexact real from the sign, whole digits, and remaining text.
-    -- Fills missing digits around a decimal point, validates any exponent,
-    -- and requires at least one mantissa digit before converting the result.
+    -- Normalizes .5 to 0.5 and 3. to 3.0, then validates any exponent.
     readDecimal :: String -> String -> String -> Maybe SExpr
     readDecimal sign whole rest = do
       let (mantissa, suffix) = case rest of
-            -- A decimal point: normalize .5 to 0.5 and 3. to 3.0,
-            -- leaving any exponent text for readExponent.
             '.' : afterDot ->
               let (fraction, remaining) = span decimalDigit afterDot
               in (defaultIfEmpty "0" whole <> "." <>
                   defaultIfEmpty "0" fraction, remaining)
-            -- No decimal point: give an exponent form such as 3e2
-            -- a Haskell-readable real mantissa (3.0).
             _ -> (whole <> ".0", rest)
+          -- Reject a mantissa with no digits, such as . or .e2.
           hasDigits = not (null whole) || case rest of
-            -- With no whole digits, a digit after the dot makes .5 valid.
             '.' : next : _ -> decimalDigit next
-            -- Otherwise there are no digits; reject forms such as . or .e2.
             _ -> False
       exponent <- readExponent suffix
       if hasDigits
