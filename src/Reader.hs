@@ -10,7 +10,6 @@ module Reader
 
 import Control.Applicative ((<|>))
 import Data.Char (isAsciiLower, isAsciiUpper, isSpace, toLower)
-import Data.Maybe (fromMaybe)
 import Text.Read (readMaybe)
 
 import Number (Number(..))
@@ -190,8 +189,8 @@ readNumber text = do
       let (mantissa, suffix) = case rest of
             '.' : afterDot ->
               let (fraction, remaining) = span decimalDigit afterDot
-              in (fromMaybe "0" (nonempty whole) <> "." <>
-                  fromMaybe "0" (nonempty fraction), remaining)
+              in (defaultIfEmpty "0" whole <> "." <>
+                  defaultIfEmpty "0" fraction, remaining)
             _ -> (whole <> ".0", rest)
           hasDigits = not (null whole) || case rest of
             '.' : next : _ -> decimalDigit next
@@ -201,10 +200,11 @@ readNumber text = do
         then SExpr.Number . InexactReal <$> readMaybe (sign <> mantissa <> exponent)
         else Nothing
   where
-    nonempty :: String -> Maybe String
-    nonempty "" = Nothing
-    nonempty value = Just value
+    defaultIfEmpty :: String -> String -> String
+    defaultIfEmpty fallback "" = fallback
+    defaultIfEmpty _ text = text
 
+    readExponent :: String -> Maybe String
     readExponent "" = Just ""
     readExponent (marker : rest)
       | marker `elem` "eE" =
