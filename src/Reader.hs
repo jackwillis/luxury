@@ -175,6 +175,9 @@ validIdentifier text
 decimalDigit :: Char -> Bool
 decimalDigit char = char >= '0' && char <= '9'
 
+-- Reads signed decimal integers and reals, including exponent notation.
+-- Validates Scheme syntax and normalizes it before using Haskell's reader;
+-- malformed or unsupported numeric forms return Nothing.
 readNumber :: String -> Maybe SExpr
 readNumber text =
   let (sign, unsigned) = readSign text
@@ -184,6 +187,9 @@ readNumber text =
       SExpr.Number . ExactInteger <$> readMaybe (sign <> whole)
     _ -> readDecimal sign whole rest
   where
+    -- Builds an inexact real from the sign, whole digits, and remaining text.
+    -- Fills missing digits around a decimal point, validates any exponent,
+    -- and requires at least one mantissa digit before converting the result.
     readDecimal :: String -> String -> String -> Maybe SExpr
     readDecimal sign whole rest = do
       let (mantissa, suffix) = case rest of
