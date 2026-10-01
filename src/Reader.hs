@@ -162,9 +162,21 @@ validIdentifier text
             [] -> False
         | otherwise -> False
   where
+    -- Ordinary identifiers start with a letter or Scheme's special initial
+    -- punctuation. Digits, signs, dots, and @ cannot start this form.
     initial char = isAsciiLower char || isAsciiUpper char || char `elem` "!$%&*/:<=>?^_~"
+
+    -- After the initial character, digits, signs, dots, and @ are also allowed
+    -- (for example, list->vector, a1, and foo.bar).
     subsequent char = initial char || decimalDigit char || char `elem` "+-.@"
+
+    -- Immediately after a leading + or -, an identifier needs an initial
+    -- character, another sign, or @. A digit instead belongs to numeric syntax.
+    -- A dot takes the separate sign-dot branch above.
     signSubsequent char = initial char || char `elem` "+-@"
+
+    -- Immediately after a leading dot (or sign followed by dot), another dot
+    -- is allowed too: ... and +.. are identifiers, while .5 is numeric syntax.
     dotSubsequent char = signSubsequent char || char == '.'
 
 decimalDigit :: Char -> Bool
