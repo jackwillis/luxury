@@ -144,14 +144,10 @@ readBoolean text =
     "#false" -> Just False
     _        -> Nothing
 
--- Recognizes unescaped ASCII identifiers using R7RS section 7.1.1.
--- Ordinary names start with a letter or special punctuation (foo, set!).
--- "Peculiar identifiers" may instead start with a sign or dot (+, -foo, ...),
--- provided the following characters distinguish the name from numeric syntax.
--- Numeric exceptions such as +i and +inf.0 must not become symbols merely
--- because their number syntax is not implemented yet. Other numeric forms are
--- handled by readNumber before this check. Escaped identifiers (|...|) and
--- additional Unicode identifier characters are deferred.
+-- Recognizes unescaped ASCII identifiers (R7RS section 7.1.1), including names
+-- starting with signs or dots. Numeric forms are tried before identifiers;
+-- unsupported numeric exceptions must not silently become symbols.
+-- Escaped and Unicode identifiers are deferred.
 validIdentifier :: String -> Bool
 validIdentifier text
   | map toLower text `elem` ["+i", "-i", "+inf.0", "-inf.0", "+nan.0", "-nan.0"] = False
@@ -168,21 +164,13 @@ validIdentifier text
             [] -> False
         | otherwise -> False
   where
-    -- Ordinary identifiers start with a letter or Scheme's special initial
-    -- punctuation. Digits, signs, dots, and @ cannot start this form.
     initial char = isAsciiLower char || isAsciiUpper char || char `elem` "!$%&*/:<=>?^_~"
-
-    -- After the initial character, digits, signs, dots, and @ are also allowed
-    -- (for example, list->vector, a1, and foo.bar).
     subsequent char = initial char || decimalDigit char || char `elem` "+-.@"
 
-    -- Immediately after a leading + or -, an identifier needs an initial
-    -- character, another sign, or @. A digit instead belongs to numeric syntax.
-    -- A dot takes the separate sign-dot branch above.
+    -- After a leading sign, digits would indicate a number.
     signSubsequent char = initial char || char `elem` "+-@"
 
-    -- Immediately after a leading dot (or sign followed by dot), another dot
-    -- is allowed too: ... and +.. are identifiers, while .5 is numeric syntax.
+    -- After a leading dot or sign-dot, another dot is allowed.
     dotSubsequent char = signSubsequent char || char == '.'
 
 decimalDigit :: Char -> Bool
@@ -213,6 +201,7 @@ readNumber text = do
         then SExpr.Number . InexactReal <$> readMaybe (sign <> mantissa <> exponent)
         else Nothing
   where
+    nonempty :: String -> Maybe String
     nonempty "" = Nothing
     nonempty value = Just value
 
